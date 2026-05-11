@@ -10,6 +10,9 @@ public class SleepLog {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "user_id")
+    private String userId;
+
     private LocalDate date;
     private String bedtime;
     private String wakeTime;
@@ -19,6 +22,8 @@ public class SleepLog {
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
+    public String getUserId() { return userId; }
+    public void setUserId(String userId) { this.userId = userId; }
     public LocalDate getDate() { return date; }
     public void setDate(LocalDate date) { this.date = date; }
     public String getBedtime() { return bedtime; }

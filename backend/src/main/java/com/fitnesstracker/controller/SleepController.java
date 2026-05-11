@@ -2,6 +2,7 @@ package com.fitnesstracker.controller;
 
 import com.fitnesstracker.model.SleepLog;
 import com.fitnesstracker.repository.SleepLogRepository;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 
@@ -23,12 +24,16 @@ public class SleepController {
 
     @GetMapping
     public List<SleepLog> getByDate(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        return repository.findByDate(date);
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            HttpServletRequest request) {
+        String userId = (String) request.getAttribute("userId");
+        return repository.findByUserIdAndDate(userId, date);
     }
 
     @PostMapping
-    public SleepLog create(@RequestBody SleepLog sleepLog) {
+    public SleepLog create(@RequestBody SleepLog sleepLog, HttpServletRequest request) {
+        String userId = (String) request.getAttribute("userId");
+        sleepLog.setUserId(userId);
         if (sleepLog.getDate() == null) {
             sleepLog.setDate(LocalDate.now());
         }
@@ -45,8 +50,10 @@ public class SleepController {
     @GetMapping("/trend")
     public List<Map<String, Object>> getTrend(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
-        List<SleepLog> logs = repository.findByDateBetween(from, to);
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            HttpServletRequest request) {
+        String userId = (String) request.getAttribute("userId");
+        List<SleepLog> logs = repository.findByUserIdAndDateBetween(userId, from, to);
 
         return logs.stream()
                 .sorted(Comparator.comparing(SleepLog::getDate))

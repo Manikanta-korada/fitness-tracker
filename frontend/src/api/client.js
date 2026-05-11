@@ -1,8 +1,15 @@
+import { supabase } from '../lib/supabase';
+
 const BASE = import.meta.env.VITE_API_URL || '/api';
 
 async function request(path, options = {}) {
+  const { data: { session } } = await supabase.auth.getSession();
+  const headers = { 'Content-Type': 'application/json' };
+  if (session?.access_token) {
+    headers['Authorization'] = `Bearer ${session.access_token}`;
+  }
   const res = await fetch(`${BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     ...options,
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);

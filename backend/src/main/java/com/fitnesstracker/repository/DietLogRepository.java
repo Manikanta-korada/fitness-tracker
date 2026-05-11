@@ -8,4 +8,6 @@ import java.util.List;
 public interface DietLogRepository extends JpaRepository<DietLog, Long> {
     List<DietLog> findByDate(LocalDate date);
     List<DietLog> findByDateBetween(LocalDate from, LocalDate to);
+    List<DietLog> findByUserIdAndDate(String userId, LocalDate date);
+    List<DietLog> findByUserIdAndDateBetween(String userId, LocalDate from, LocalDate to);
 }

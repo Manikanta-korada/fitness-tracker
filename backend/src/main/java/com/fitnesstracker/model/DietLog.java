@@ -10,6 +10,9 @@ public class DietLog {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "user_id")
+    private String userId;
+
     private LocalDate date;
 
     @ManyToOne
@@ -30,6 +33,8 @@ public class DietLog {
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
+    public String getUserId() { return userId; }
+    public void setUserId(String userId) { this.userId = userId; }
     public LocalDate getDate() { return date; }
     public void setDate(LocalDate date) { this.date = date; }
     public Meal getMeal() { return meal; }

@@ -2,6 +2,7 @@ package com.fitnesstracker.controller;
 
 import com.fitnesstracker.model.WaterIntake;
 import com.fitnesstracker.repository.WaterIntakeRepository;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,12 +22,16 @@ public class WaterController {
 
     @GetMapping
     public List<WaterIntake> getByDate(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        return repository.findByDate(date);
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            HttpServletRequest request) {
+        String userId = (String) request.getAttribute("userId");
+        return repository.findByUserIdAndDate(userId, date);
     }
 
     @PostMapping
-    public WaterIntake create(@RequestBody WaterIntake intake) {
+    public WaterIntake create(@RequestBody WaterIntake intake, HttpServletRequest request) {
+        String userId = (String) request.getAttribute("userId");
+        intake.setUserId(userId);
         if (intake.getDate() == null) {
             intake.setDate(LocalDate.now());
         }
@@ -41,8 +46,10 @@ public class WaterController {
     @GetMapping("/trend")
     public List<Map<String, Object>> getTrend(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
-        List<WaterIntake> logs = repository.findByDateBetween(from, to);
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            HttpServletRequest request) {
+        String userId = (String) request.getAttribute("userId");
+        List<WaterIntake> logs = repository.findByUserIdAndDateBetween(userId, from, to);
 
         Map<LocalDate, Map<String, Integer>> daily = new TreeMap<>();
         for (WaterIntake log : logs) {

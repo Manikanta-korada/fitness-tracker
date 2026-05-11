@@ -8,4 +8,6 @@ import java.util.List;
 public interface WorkoutSessionRepository extends JpaRepository<WorkoutSession, Long> {
     List<WorkoutSession> findByDateBetween(LocalDate from, LocalDate to);
     List<WorkoutSession> findByDate(LocalDate date);
+    List<WorkoutSession> findByUserId(String userId);
+    List<WorkoutSession> findByUserIdAndDateBetween(String userId, LocalDate from, LocalDate to);
 }

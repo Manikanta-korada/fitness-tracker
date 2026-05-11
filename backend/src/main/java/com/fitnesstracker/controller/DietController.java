@@ -4,6 +4,7 @@ import com.fitnesstracker.model.DietLog;
 import com.fitnesstracker.model.Meal;
 import com.fitnesstracker.repository.DietLogRepository;
 import com.fitnesstracker.repository.MealRepository;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 
@@ -24,12 +25,16 @@ public class DietController {
 
     @GetMapping
     public List<DietLog> getByDate(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        return dietLogRepository.findByDate(date);
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            HttpServletRequest request) {
+        String userId = (String) request.getAttribute("userId");
+        return dietLogRepository.findByUserIdAndDate(userId, date);
     }
 
     @PostMapping
-    public DietLog create(@RequestBody DietLog dietLog) {
+    public DietLog create(@RequestBody DietLog dietLog, HttpServletRequest request) {
+        String userId = (String) request.getAttribute("userId");
+        dietLog.setUserId(userId);
         if (dietLog.getMeal() != null && dietLog.getMeal().getId() != null) {
             Meal meal = mealRepository.findById(dietLog.getMeal().getId()).orElseThrow();
             dietLog.setMeal(meal);

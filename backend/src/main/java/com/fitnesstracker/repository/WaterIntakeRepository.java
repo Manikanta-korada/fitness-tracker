@@ -8,4 +8,6 @@ import java.util.List;
 public interface WaterIntakeRepository extends JpaRepository<WaterIntake, Long> {
     List<WaterIntake> findByDate(LocalDate date);
     List<WaterIntake> findByDateBetween(LocalDate from, LocalDate to);
+    List<WaterIntake> findByUserIdAndDate(String userId, LocalDate date);
+    List<WaterIntake> findByUserIdAndDateBetween(String userId, LocalDate from, LocalDate to);
 }

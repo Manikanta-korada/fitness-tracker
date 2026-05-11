@@ -1,4 +1,5 @@
 import { Routes, Route } from 'react-router-dom';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import WorkoutLog from './pages/WorkoutLog';
@@ -6,8 +7,23 @@ import WorkoutTemplates from './pages/WorkoutTemplates';
 import DietLog from './pages/DietLog';
 import MealLibrary from './pages/MealLibrary';
 import Progress from './pages/Progress';
+import Login from './pages/Login';
 
-export default function App() {
+function ProtectedApp() {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <p className="text-gray-500">Loading...</p>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Login />;
+  }
+
   return (
     <Routes>
       <Route element={<Layout />}>
@@ -19,5 +35,13 @@ export default function App() {
         <Route path="/progress" element={<Progress />} />
       </Route>
     </Routes>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <ProtectedApp />
+    </AuthProvider>
   );
 }

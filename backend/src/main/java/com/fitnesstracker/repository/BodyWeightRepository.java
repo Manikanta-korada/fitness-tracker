@@ -6,4 +6,5 @@ import java.util.List;
 
 public interface BodyWeightRepository extends JpaRepository<BodyWeight, Long> {
     List<BodyWeight> findAllByOrderByDateAsc();
+    List<BodyWeight> findByUserIdOrderByDateAsc(String userId);
 }

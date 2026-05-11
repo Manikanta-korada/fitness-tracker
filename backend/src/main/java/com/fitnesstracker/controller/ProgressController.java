@@ -4,6 +4,7 @@ import com.fitnesstracker.model.*;
 import com.fitnesstracker.repository.BodyWeightRepository;
 import com.fitnesstracker.repository.DietLogRepository;
 import com.fitnesstracker.repository.WorkoutSessionRepository;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 
@@ -29,12 +30,15 @@ public class ProgressController {
     }
 
     @GetMapping("/weight")
-    public List<BodyWeight> getWeightHistory() {
-        return bodyWeightRepository.findAllByOrderByDateAsc();
+    public List<BodyWeight> getWeightHistory(HttpServletRequest request) {
+        String userId = (String) request.getAttribute("userId");
+        return bodyWeightRepository.findByUserIdOrderByDateAsc(userId);
     }
 
     @PostMapping("/weight")
-    public BodyWeight logWeight(@RequestBody BodyWeight bodyWeight) {
+    public BodyWeight logWeight(@RequestBody BodyWeight bodyWeight, HttpServletRequest request) {
+        String userId = (String) request.getAttribute("userId");
+        bodyWeight.setUserId(userId);
         if (bodyWeight.getDate() == null) {
             bodyWeight.setDate(LocalDate.now());
         }
@@ -42,8 +46,9 @@ public class ProgressController {
     }
 
     @GetMapping("/exercise/{exerciseId}")
-    public List<Map<String, Object>> getExerciseProgress(@PathVariable Long exerciseId) {
-        List<WorkoutSession> sessions = workoutSessionRepository.findAll();
+    public List<Map<String, Object>> getExerciseProgress(@PathVariable Long exerciseId, HttpServletRequest request) {
+        String userId = (String) request.getAttribute("userId");
+        List<WorkoutSession> sessions = workoutSessionRepository.findByUserId(userId);
         List<Map<String, Object>> progress = new ArrayList<>();
 
         for (WorkoutSession session : sessions) {
@@ -73,8 +78,10 @@ public class ProgressController {
     @GetMapping("/calories")
     public List<Map<String, Object>> getCalorieTrend(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
-        List<DietLog> logs = dietLogRepository.findByDateBetween(from, to);
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            HttpServletRequest request) {
+        String userId = (String) request.getAttribute("userId");
+        List<DietLog> logs = dietLogRepository.findByUserIdAndDateBetween(userId, from, to);
 
         Map<LocalDate, Integer> dailyCalories = logs.stream()
                 .collect(Collectors.groupingBy(DietLog::getDate, Collectors.summingInt(DietLog::getCalories)));
@@ -93,8 +100,10 @@ public class ProgressController {
     @GetMapping("/macros")
     public List<Map<String, Object>> getMacroTrend(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
-        List<DietLog> logs = dietLogRepository.findByDateBetween(from, to);
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            HttpServletRequest request) {
+        String userId = (String) request.getAttribute("userId");
+        List<DietLog> logs = dietLogRepository.findByUserIdAndDateBetween(userId, from, to);
 
         Map<LocalDate, List<DietLog>> byDate = logs.stream()
                 .collect(Collectors.groupingBy(DietLog::getDate));
@@ -116,8 +125,10 @@ public class ProgressController {
     @GetMapping("/meal-breakdown")
     public List<Map<String, Object>> getMealTypeBreakdown(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
-        List<DietLog> logs = dietLogRepository.findByDateBetween(from, to);
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            HttpServletRequest request) {
+        String userId = (String) request.getAttribute("userId");
+        List<DietLog> logs = dietLogRepository.findByUserIdAndDateBetween(userId, from, to);
 
         Map<String, Integer> byType = new LinkedHashMap<>();
         for (String type : List.of("Breakfast", "Pre-Workout", "Lunch", "Snacks", "Post-Workout", "Dinner")) {
@@ -142,8 +153,10 @@ public class ProgressController {
     @GetMapping("/workout-frequency")
     public List<Map<String, Object>> getWorkoutFrequency(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
-        List<WorkoutSession> sessions = workoutSessionRepository.findByDateBetween(from, to);
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            HttpServletRequest request) {
+        String userId = (String) request.getAttribute("userId");
+        List<WorkoutSession> sessions = workoutSessionRepository.findByUserIdAndDateBetween(userId, from, to);
 
         Map<String, Long> weeklyCount = new TreeMap<>();
         for (WorkoutSession session : sessions) {
@@ -166,8 +179,10 @@ public class ProgressController {
     @GetMapping("/muscle-volume")
     public List<Map<String, Object>> getMuscleVolume(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
-        List<WorkoutSession> sessions = workoutSessionRepository.findByDateBetween(from, to);
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            HttpServletRequest request) {
+        String userId = (String) request.getAttribute("userId");
+        List<WorkoutSession> sessions = workoutSessionRepository.findByUserIdAndDateBetween(userId, from, to);
 
         Map<String, Double> volumeByGroup = new TreeMap<>();
         for (WorkoutSession session : sessions) {
