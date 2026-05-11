@@ -8,6 +8,7 @@ export default function WorkoutLog() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [sessionName, setSessionName] = useState('');
+  const [workoutDate, setWorkoutDate] = useState(new Date().toISOString().split('T')[0]);
   const [entries, setEntries] = useState([]);
 
   useEffect(() => {
@@ -71,6 +72,7 @@ export default function WorkoutLog() {
   function startEdit(session) {
     setEditingId(session.id);
     setSessionName(session.name);
+    setWorkoutDate(session.date);
     setEntries(
       session.entries.map((e) => ({
         exercise: { id: e.exercise?.id },
@@ -88,17 +90,18 @@ export default function WorkoutLog() {
     setShowForm(false);
     setEditingId(null);
     setSessionName('');
+    setWorkoutDate(new Date().toISOString().split('T')[0]);
     setEntries([]);
   }
 
   async function handleSubmit(e) {
     e.preventDefault();
     if (editingId) {
-      await workoutsApi.update(editingId, { name: sessionName, entries });
+      await workoutsApi.update(editingId, { name: sessionName, date: workoutDate, entries });
     } else {
       await workoutsApi.create({
         name: sessionName,
-        date: new Date().toISOString().split('T')[0],
+        date: workoutDate,
         entries,
       });
     }
@@ -148,14 +151,22 @@ export default function WorkoutLog() {
       {showForm && (
         <form onSubmit={handleSubmit} className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm mb-6">
           <h3 className="text-sm font-semibold text-gray-700 mb-3">{editingId ? 'Edit Workout' : 'New Workout'}</h3>
-          <input
-            type="text"
-            value={sessionName}
-            onChange={(e) => setSessionName(e.target.value)}
-            placeholder="Workout name (e.g., Push Day)"
-            className="w-full border border-gray-200 rounded-lg px-3 py-2 mb-4 text-sm"
-            required
-          />
+          <div className="flex gap-3 mb-4">
+            <input
+              type="text"
+              value={sessionName}
+              onChange={(e) => setSessionName(e.target.value)}
+              placeholder="Workout name (e.g., Push Day)"
+              className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm"
+              required
+            />
+            <input
+              type="date"
+              value={workoutDate}
+              onChange={(e) => setWorkoutDate(e.target.value)}
+              className="border border-gray-200 rounded-lg px-3 py-2 text-sm"
+            />
+          </div>
 
           {entries.map((entry, entryIdx) => (
             <div key={entryIdx} className="border border-gray-200 rounded-lg p-3 mb-3">

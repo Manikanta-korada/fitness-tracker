@@ -22,19 +22,19 @@ export default function DietLog() {
   const [sleepLogs, setSleepLogs] = useState([]);
   const [bedtime, setBedtime] = useState('23:00');
   const [wakeTime, setWakeTime] = useState('07:00');
-  const today = new Date().toISOString().split('T')[0];
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [selectedDate]);
 
   async function loadData() {
     const [l, m, t, w, s] = await Promise.all([
-      dietApi.getByDate(today),
+      dietApi.getByDate(selectedDate),
       mealsApi.getAll(),
       targetsApi.get(),
-      waterApi.getByDate(today),
-      sleepApi.getByDate(today),
+      waterApi.getByDate(selectedDate),
+      sleepApi.getByDate(selectedDate),
     ]);
     setLogs(l);
     setMeals(m);
@@ -47,7 +47,7 @@ export default function DietLog() {
     e.preventDefault();
     if (customMode) {
       await dietApi.create({
-        date: today,
+        date: selectedDate,
         mealType,
         customName,
         calories: parseInt(customCalories),
@@ -63,7 +63,7 @@ export default function DietLog() {
       setCustomFat('');
     } else {
       await dietApi.create({
-        date: today,
+        date: selectedDate,
         mealType,
         meal: { id: parseInt(selectedMealId) },
         servings: parseFloat(servings),
@@ -80,7 +80,7 @@ export default function DietLog() {
   async function handleAddWater(e) {
     e.preventDefault();
     await waterApi.create({
-      date: today,
+      date: selectedDate,
       type: waterType,
       amountMl: parseInt(waterAmount),
     });
@@ -95,7 +95,7 @@ export default function DietLog() {
 
   async function handleAddSleep(e) {
     e.preventDefault();
-    await sleepApi.create({ date: today, bedtime, wakeTime });
+    await sleepApi.create({ date: selectedDate, bedtime, wakeTime });
     loadData();
   }
 
@@ -126,7 +126,25 @@ export default function DietLog() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Diet Log</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">Diet Log</h1>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setSelectedDate(new Date(new Date(selectedDate).getTime() - 86400000).toISOString().split('T')[0])}
+            className="px-2 py-1 bg-gray-100 rounded-lg text-sm hover:bg-gray-200"
+          >←</button>
+          <input
+            type="date"
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
+            className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm"
+          />
+          <button
+            onClick={() => setSelectedDate(new Date(new Date(selectedDate).getTime() + 86400000).toISOString().split('T')[0])}
+            className="px-2 py-1 bg-gray-100 rounded-lg text-sm hover:bg-gray-200"
+          >→</button>
+        </div>
+      </div>
 
       <div className="grid grid-cols-4 gap-3 mb-6">
         <MiniStat label="Calories" value={totalCalories} target={targets?.calorieTarget} unit="kcal" />
@@ -239,7 +257,7 @@ export default function DietLog() {
 
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm">
         <div className="p-4 border-b border-gray-100">
-          <h2 className="font-semibold text-gray-900">Today's Meals</h2>
+          <h2 className="font-semibold text-gray-900">{selectedDate === new Date().toISOString().split('T')[0] ? "Today's Meals" : `Meals for ${selectedDate}`}</h2>
         </div>
         {logs.length === 0 ? (
           <p className="p-4 text-gray-400 text-sm">No meals logged yet.</p>
