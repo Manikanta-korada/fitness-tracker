@@ -3,7 +3,6 @@ import { workoutsApi, exercisesApi, templatesApi } from '../api/client';
 
 export default function WorkoutLog() {
   const [activeTab, setActiveTab] = useState('log');
-  const [sessions, setSessions] = useState([]);
   const [exercises, setExercises] = useState([]);
   const [templates, setTemplates] = useState([]);
   const [showForm, setShowForm] = useState(false);
@@ -17,7 +16,10 @@ export default function WorkoutLog() {
   const [viewDate, setViewDate] = useState(new Date().toISOString().split('T')[0]);
   const [expandedSession, setExpandedSession] = useState(null);
   const [calendarMonth, setCalendarMonth] = useState(new Date());
-  const [workoutDates, setWorkoutDates] = useState(new Set());
+  const [monthSessions, setMonthSessions] = useState([]);
+
+  const workoutDates = new Set(monthSessions.map(s => s.date));
+  const sessions = monthSessions.filter(s => s.date === viewDate);
 
   useEffect(() => {
     exercisesApi.getAll().then(setExercises);
@@ -25,28 +27,18 @@ export default function WorkoutLog() {
   }, []);
 
   useEffect(() => {
-    loadSessions();
-  }, [viewDate]);
-
-  useEffect(() => {
     loadMonthWorkouts();
   }, [calendarMonth]);
-
-  async function loadSessions() {
-    setSessions(await workoutsApi.getAll(viewDate, viewDate));
-  }
 
   async function loadMonthWorkouts() {
     const year = calendarMonth.getFullYear();
     const month = calendarMonth.getMonth();
     const from = new Date(year, month, 1).toISOString().split('T')[0];
     const to = new Date(year, month + 1, 0).toISOString().split('T')[0];
-    const monthSessions = await workoutsApi.getAll(from, to);
-    setWorkoutDates(new Set(monthSessions.map(s => s.date)));
+    setMonthSessions(await workoutsApi.getAll(from, to));
   }
 
   async function loadData() {
-    loadSessions();
     loadMonthWorkouts();
     templatesApi.getAll().then(setTemplates);
   }
