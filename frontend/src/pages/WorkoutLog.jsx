@@ -18,18 +18,21 @@ export default function WorkoutLog() {
   const [expandedSession, setExpandedSession] = useState(null);
 
   useEffect(() => {
-    loadData();
+    exercisesApi.getAll().then(setExercises);
+    templatesApi.getAll().then(setTemplates);
+  }, []);
+
+  useEffect(() => {
+    loadSessions();
   }, [viewDate]);
 
+  async function loadSessions() {
+    setSessions(await workoutsApi.getAll(viewDate, viewDate));
+  }
+
   async function loadData() {
-    const [s, e, t] = await Promise.all([
-      workoutsApi.getAll(viewDate, viewDate),
-      exercisesApi.getAll(),
-      templatesApi.getAll(),
-    ]);
-    setSessions(s);
-    setExercises(e);
-    setTemplates(t);
+    loadSessions();
+    templatesApi.getAll().then(setTemplates);
   }
 
   function addEntry() {
