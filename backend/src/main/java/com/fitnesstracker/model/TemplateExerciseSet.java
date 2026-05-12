@@ -18,6 +18,8 @@ public class TemplateExerciseSet {
     private int setNumber;
     private int reps;
     private double weightKg;
+    private Double durationMinutes;
+    private Double distanceKm;
 
     public TemplateExerciseSet() {}
 
@@ -31,4 +33,8 @@ public class TemplateExerciseSet {
     public void setReps(int reps) { this.reps = reps; }
     public double getWeightKg() { return weightKg; }
     public void setWeightKg(double weightKg) { this.weightKg = weightKg; }
+    public Double getDurationMinutes() { return durationMinutes; }
+    public void setDurationMinutes(Double durationMinutes) { this.durationMinutes = durationMinutes; }
+    public Double getDistanceKm() { return distanceKm; }
+    public void setDistanceKm(Double distanceKm) { this.distanceKm = distanceKm; }
 }

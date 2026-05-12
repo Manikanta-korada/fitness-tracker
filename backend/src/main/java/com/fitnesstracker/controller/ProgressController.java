@@ -259,7 +259,7 @@ public class ProgressController {
         LocalDate today = LocalDate.now();
         List<WorkoutSession> recentSessions = workoutSessionRepository.findByUserIdAndDateBetween(userId, today.minusDays(7), today);
 
-        List<String> allGroups = List.of("Chest", "Back", "Shoulders", "Legs", "Biceps", "Triceps", "Core");
+        List<String> allGroups = List.of("Chest", "Back", "Shoulders", "Legs", "Biceps", "Triceps", "Core", "Cardio");
         Map<String, LocalDate> lastTrained = new HashMap<>();
         for (String group : allGroups) {
             lastTrained.put(group, null);

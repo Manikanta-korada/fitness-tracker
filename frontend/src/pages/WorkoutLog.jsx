@@ -35,7 +35,7 @@ export default function WorkoutLog() {
   function addEntry() {
     setEntries([...entries, {
       exercise: { id: exercises[0]?.id },
-      sets: [{ setNumber: 1, reps: 10, weightKg: 0 }],
+      sets: [{ setNumber: 1, reps: 10, weightKg: 0, durationMinutes: null, distanceKm: null }],
     }]);
   }
 
@@ -57,6 +57,8 @@ export default function WorkoutLog() {
       setNumber: sets.length + 1,
       reps: lastSet?.reps || 10,
       weightKg: lastSet?.weightKg || 0,
+      durationMinutes: lastSet?.durationMinutes || null,
+      distanceKm: lastSet?.distanceKm || null,
     });
     setEntries(updated);
   }
@@ -131,7 +133,7 @@ export default function WorkoutLog() {
     if (last && last.entries) {
       setEntries(last.entries.map((e) => ({
         exercise: { id: e.exercise?.id },
-        sets: e.sets.map((s) => ({ setNumber: s.setNumber, reps: s.reps, weightKg: s.weightKg })),
+        sets: e.sets.map((s) => ({ setNumber: s.setNumber, reps: s.reps, weightKg: s.weightKg, durationMinutes: s.durationMinutes, distanceKm: s.distanceKm })),
       })));
     }
   }
@@ -139,7 +141,7 @@ export default function WorkoutLog() {
   function addTemplateEntry() {
     setTemplateEntries([...templateEntries, {
       exercise: { id: exercises[0]?.id },
-      sets: [{ setNumber: 1, reps: 10, weightKg: 0 }],
+      sets: [{ setNumber: 1, reps: 10, weightKg: 0, durationMinutes: null, distanceKm: null }],
     }]);
   }
 
@@ -157,7 +159,7 @@ export default function WorkoutLog() {
     const updated = [...templateEntries];
     const sets = updated[entryIndex].sets;
     const lastSet = sets[sets.length - 1];
-    sets.push({ setNumber: sets.length + 1, reps: lastSet?.reps || 10, weightKg: lastSet?.weightKg || 0 });
+    sets.push({ setNumber: sets.length + 1, reps: lastSet?.reps || 10, weightKg: lastSet?.weightKg || 0, durationMinutes: lastSet?.durationMinutes || null, distanceKm: lastSet?.distanceKm || null });
     setTemplateEntries(updated);
   }
 
@@ -254,13 +256,17 @@ export default function WorkoutLog() {
                     <span className="w-10">Set</span>
                     <span className="w-16 text-center">Reps</span>
                     <span className="w-20 text-center">Weight (kg)</span>
+                    <span className="w-20 text-center">Min</span>
+                    <span className="w-20 text-center">Dist (km)</span>
                     <span className="w-6"></span>
                   </div>
                   {entry.sets.map((set, setIdx) => (
                     <div key={setIdx} className="flex gap-2 items-center mb-1 ml-2">
                       <span className="w-10 text-sm text-gray-500">{set.setNumber}</span>
-                      <input type="number" value={set.reps} onChange={(e) => updateTemplateSet(entryIdx, setIdx, 'reps', e.target.value)} className="w-16 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center" min="1" />
+                      <input type="number" value={set.reps} onChange={(e) => updateTemplateSet(entryIdx, setIdx, 'reps', e.target.value)} className="w-16 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center" min="0" />
                       <input type="number" value={set.weightKg} onChange={(e) => updateTemplateSet(entryIdx, setIdx, 'weightKg', e.target.value)} className="w-20 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center" step="0.5" />
+                      <input type="number" value={set.durationMinutes || ''} onChange={(e) => updateTemplateSet(entryIdx, setIdx, 'durationMinutes', e.target.value || null)} className="w-20 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center" placeholder="-" min="0" />
+                      <input type="number" value={set.distanceKm || ''} onChange={(e) => updateTemplateSet(entryIdx, setIdx, 'distanceKm', e.target.value || null)} className="w-20 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center" placeholder="-" step="0.1" min="0" />
                       <button type="button" onClick={() => removeTemplateSet(entryIdx, setIdx)} className="text-red-400 text-xs w-6">X</button>
                     </div>
                   ))}
@@ -290,7 +296,13 @@ export default function WorkoutLog() {
                       <div key={idx} className="text-sm text-gray-600">
                         <span className="font-medium text-gray-700">{entry.exercise?.name}</span>
                         <span className="text-gray-400 ml-2">
-                          {entry.sets?.length} sets: {entry.sets?.map(s => `${s.reps}x${s.weightKg}kg`).join(', ')}
+                          {entry.sets?.length} sets: {entry.sets?.map(s => {
+                          let parts = [];
+                          if (s.reps) parts.push(`${s.reps}x${s.weightKg}kg`);
+                          if (s.durationMinutes) parts.push(`${s.durationMinutes}min`);
+                          if (s.distanceKm) parts.push(`${s.distanceKm}km`);
+                          return parts.join(' ') || `${s.reps}x${s.weightKg}kg`;
+                        }).join(', ')}
                         </span>
                       </div>
                     ))}
@@ -377,6 +389,8 @@ export default function WorkoutLog() {
                 <span className="w-10">Set</span>
                 <span className="w-16 text-center">Reps</span>
                 <span className="w-20 text-center">Weight (kg)</span>
+                <span className="w-20 text-center">Min</span>
+                <span className="w-20 text-center">Dist (km)</span>
                 <span className="w-6"></span>
               </div>
 
@@ -388,7 +402,7 @@ export default function WorkoutLog() {
                     value={set.reps}
                     onChange={(e) => updateSet(entryIdx, setIdx, 'reps', e.target.value)}
                     className="w-16 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center"
-                    min="1"
+                    min="0"
                   />
                   <input
                     type="number"
@@ -396,6 +410,23 @@ export default function WorkoutLog() {
                     onChange={(e) => updateSet(entryIdx, setIdx, 'weightKg', e.target.value)}
                     className="w-20 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center"
                     step="0.5"
+                  />
+                  <input
+                    type="number"
+                    value={set.durationMinutes || ''}
+                    onChange={(e) => updateSet(entryIdx, setIdx, 'durationMinutes', e.target.value || null)}
+                    className="w-20 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center"
+                    placeholder="-"
+                    min="0"
+                  />
+                  <input
+                    type="number"
+                    value={set.distanceKm || ''}
+                    onChange={(e) => updateSet(entryIdx, setIdx, 'distanceKm', e.target.value || null)}
+                    className="w-20 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center"
+                    placeholder="-"
+                    step="0.1"
+                    min="0"
                   />
                   <button type="button" onClick={() => removeSet(entryIdx, setIdx)} className="text-red-400 text-xs w-6">X</button>
                 </div>
@@ -465,16 +496,20 @@ export default function WorkoutLog() {
                 {session.entries.map((entry, idx) => (
                   <div key={idx} className="bg-gray-50 rounded-lg px-3 py-2">
                     <p className="font-medium text-gray-700 text-sm mb-1">{entry.exercise?.name}</p>
-                    <div className="grid grid-cols-3 text-xs font-medium text-gray-400 mb-1 ml-2">
+                    <div className="grid grid-cols-5 text-xs font-medium text-gray-400 mb-1 ml-2">
                       <span>Set</span>
                       <span className="text-center">Reps</span>
-                      <span className="text-center">Weight (kg)</span>
+                      <span className="text-center">Weight</span>
+                      <span className="text-center">Min</span>
+                      <span className="text-center">Dist</span>
                     </div>
                     {entry.sets?.map((set, sIdx) => (
-                      <div key={sIdx} className="grid grid-cols-3 text-sm text-gray-600 ml-2">
+                      <div key={sIdx} className="grid grid-cols-5 text-sm text-gray-600 ml-2">
                         <span>{set.setNumber}</span>
-                        <span className="text-center">{set.reps}</span>
-                        <span className="text-center">{set.weightKg}</span>
+                        <span className="text-center">{set.reps || '-'}</span>
+                        <span className="text-center">{set.weightKg || '-'}</span>
+                        <span className="text-center">{set.durationMinutes || '-'}</span>
+                        <span className="text-center">{set.distanceKm || '-'}</span>
                       </div>
                     ))}
                   </div>

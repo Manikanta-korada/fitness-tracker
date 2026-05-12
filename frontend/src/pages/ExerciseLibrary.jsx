@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { exercisesApi } from '../api/client';
 
-const MUSCLE_GROUPS = ['Chest', 'Back', 'Shoulders', 'Legs', 'Biceps', 'Triceps', 'Forearms', 'Core'];
+const MUSCLE_GROUPS = ['Chest', 'Back', 'Shoulders', 'Legs', 'Biceps', 'Triceps', 'Forearms', 'Core', 'Cardio'];
 
 export default function ExerciseLibrary() {
   const [exercises, setExercises] = useState([]);

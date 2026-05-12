@@ -204,6 +204,23 @@ public class DataSeeder implements CommandLineRunner {
         exerciseRepository.save(new Exercise("Dragon Flags", "Core", false));
         exerciseRepository.save(new Exercise("Weighted Decline Sit-ups", "Core", false));
 
+        // Cardio
+        exerciseRepository.save(new Exercise("Cycling (Outdoor)", "Cardio", false));
+        exerciseRepository.save(new Exercise("Cycling (Stationary)", "Cardio", false));
+        exerciseRepository.save(new Exercise("Running (Outdoor)", "Cardio", false));
+        exerciseRepository.save(new Exercise("Running (Treadmill)", "Cardio", false));
+        exerciseRepository.save(new Exercise("Walking", "Cardio", false));
+        exerciseRepository.save(new Exercise("Incline Walking (Treadmill)", "Cardio", false));
+        exerciseRepository.save(new Exercise("Swimming", "Cardio", false));
+        exerciseRepository.save(new Exercise("Jump Rope", "Cardio", false));
+        exerciseRepository.save(new Exercise("Rowing Machine", "Cardio", false));
+        exerciseRepository.save(new Exercise("Elliptical", "Cardio", false));
+        exerciseRepository.save(new Exercise("Stair Climber", "Cardio", false));
+        exerciseRepository.save(new Exercise("Battle Ropes", "Cardio", false));
+        exerciseRepository.save(new Exercise("Burpees", "Cardio", false));
+        exerciseRepository.save(new Exercise("Sprints", "Cardio", false));
+        exerciseRepository.save(new Exercise("Box Jumps", "Cardio", false));
+
         // Meals
         mealRepository.save(new Meal("Chicken Rice Bowl", 550, 45, 60, 12, false));
         mealRepository.save(new Meal("Oatmeal with Banana", 350, 12, 55, 8, false));
