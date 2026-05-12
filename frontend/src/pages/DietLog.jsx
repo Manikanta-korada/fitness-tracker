@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { dietApi, mealsApi, targetsApi, waterApi, sleepApi, healthNotesApi } from '../api/client';
+import { dietApi, mealsApi, targetsApi, waterApi, sleepApi, healthNotesApi, progressApi } from '../api/client';
 
 const MEAL_TYPES = ['Pre-Workout', 'Post-Workout', 'Breakfast', 'Lunch', 'Snacks', 'Dinner', 'Miscellaneous'];
 
@@ -27,10 +27,16 @@ export default function DietLog() {
   const [noteText, setNoteText] = useState('');
   const [noteSeverity, setNoteSeverity] = useState('info');
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [calendarMonth, setCalendarMonth] = useState(new Date());
+  const [monthCalories, setMonthCalories] = useState({});
 
   useEffect(() => {
     loadData();
   }, [selectedDate]);
+
+  useEffect(() => {
+    loadMonthCalories();
+  }, [calendarMonth]);
 
   async function loadData() {
     const [l, m, t, w, s] = await Promise.all([
@@ -47,6 +53,17 @@ export default function DietLog() {
     setSleepLogs(s);
     dietApi.getRecent().then(setRecentMeals).catch(() => {});
     healthNotesApi.getByDate(selectedDate).then(setHealthNotes).catch(() => {});
+  }
+
+  async function loadMonthCalories() {
+    const year = calendarMonth.getFullYear();
+    const month = calendarMonth.getMonth();
+    const from = new Date(year, month, 1).toISOString().split('T')[0];
+    const to = new Date(year, month + 1, 0).toISOString().split('T')[0];
+    const data = await progressApi.getCalories(from, to);
+    const map = {};
+    data.forEach(d => { map[d.date] = d.calories; });
+    setMonthCalories(map);
   }
 
   async function handleAddNote(e) {
@@ -151,31 +168,83 @@ export default function DietLog() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4">
         <h1 className="text-2xl font-bold text-gray-900">Log Meal</h1>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleCopyYesterday}
-            className="px-3 py-1.5 bg-green-50 text-green-700 rounded-lg text-xs font-medium hover:bg-green-100"
-          >
-            Copy Yesterday
-          </button>
-          <button
-            onClick={() => setSelectedDate(new Date(new Date(selectedDate).getTime() - 86400000).toISOString().split('T')[0])}
-            className="px-2 py-1 bg-gray-100 rounded-lg text-sm hover:bg-gray-200"
-          >←</button>
-          <input
-            type="date"
-            value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-            className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm"
-          />
-          <button
-            onClick={() => setSelectedDate(new Date(new Date(selectedDate).getTime() + 86400000).toISOString().split('T')[0])}
-            className="px-2 py-1 bg-gray-100 rounded-lg text-sm hover:bg-gray-200"
-          >→</button>
-        </div>
+        <button
+          onClick={handleCopyYesterday}
+          className="px-3 py-1.5 bg-green-50 text-green-700 rounded-lg text-xs font-medium hover:bg-green-100"
+        >
+          Copy Yesterday
+        </button>
       </div>
+
+      {(() => {
+        const today = new Date().toISOString().split('T')[0];
+        const year = calendarMonth.getFullYear();
+        const month = calendarMonth.getMonth();
+        const firstDay = new Date(year, month, 1);
+        const lastDay = new Date(year, month + 1, 0);
+        const startOffset = (firstDay.getDay() + 6) % 7;
+        const daysInMonth = lastDay.getDate();
+        const calorieTarget = targets?.calorieTarget || 0;
+
+        return (
+          <div className="bg-white rounded-xl p-3 border border-gray-100 shadow-sm mb-4 max-w-md">
+            <div className="flex items-center justify-between mb-2">
+              <button onClick={() => setCalendarMonth(new Date(year, month - 1, 1))} className="px-2 py-0.5 bg-gray-100 rounded text-xs hover:bg-gray-200">←</button>
+              <h3 className="text-xs font-semibold text-gray-700">
+                {calendarMonth.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+              </h3>
+              <button onClick={() => setCalendarMonth(new Date(year, month + 1, 1))} className="px-2 py-0.5 bg-gray-100 rounded text-xs hover:bg-gray-200">→</button>
+            </div>
+
+            <div className="grid grid-cols-7 gap-0.5 mb-1">
+              {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => (
+                <span key={i} className="text-[10px] text-center text-gray-400 font-medium">{d}</span>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-7 gap-0.5">
+              {Array.from({ length: startOffset }).map((_, i) => (
+                <div key={`empty-${i}`} />
+              ))}
+              {Array.from({ length: daysInMonth }).map((_, i) => {
+                const day = i + 1;
+                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const isPast = dateStr < today;
+                const isToday = dateStr === today;
+                const isSelected = dateStr === selectedDate;
+                const dayCals = monthCalories[dateStr];
+                const hasData = dayCals !== undefined;
+
+                let bgColor = '';
+                if (hasData && calorieTarget > 0 && dayCals >= calorieTarget) bgColor = 'bg-green-100 text-green-700';
+                else if (hasData) bgColor = 'bg-red-50 text-red-400';
+                else if (isPast) bgColor = 'bg-gray-100 text-gray-400';
+                else bgColor = 'bg-gray-50 text-gray-500';
+
+                return (
+                  <button
+                    key={day}
+                    onClick={() => setSelectedDate(dateStr)}
+                    className={`py-1 rounded text-[11px] font-medium flex items-center justify-center ${bgColor} ${isSelected ? 'ring-2 ring-indigo-500' : ''} ${isToday ? 'ring-1 ring-indigo-300' : ''} hover:opacity-80`}
+                  >
+                    {day}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="mt-2 flex items-center justify-between">
+              <div className="flex gap-2 text-[10px] text-gray-500">
+                <span className="flex items-center gap-0.5"><span className="w-2 h-2 rounded bg-green-100 border border-green-300" />Target met</span>
+                <span className="flex items-center gap-0.5"><span className="w-2 h-2 rounded bg-red-50 border border-red-200" />Below target</span>
+                <span className="flex items-center gap-0.5"><span className="w-2 h-2 rounded bg-gray-100 border border-gray-300" />Not logged</span>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       <div className="grid grid-cols-4 gap-3 mb-6">
         <MiniStat label="Calories" value={totalCalories} target={targets?.calorieTarget} unit="kcal" />
