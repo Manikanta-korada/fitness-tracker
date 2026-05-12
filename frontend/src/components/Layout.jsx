@@ -3,10 +3,10 @@ import { useAuth } from '../context/AuthContext';
 
 const navItems = [
   { path: '/', label: 'Dashboard' },
-  { path: '/workouts', label: 'Workouts' },
-  { path: '/templates', label: 'Templates' },
-  { path: '/diet', label: 'Diet' },
+  { path: '/workouts', label: 'Log Workout' },
+  { path: '/diet', label: 'Log Meal' },
   { path: '/meal-library', label: 'Meal Library' },
+  { path: '/exercise-library', label: 'Exercise Library' },
   { path: '/progress', label: 'Progress' },
 ];
 
@@ -16,7 +16,8 @@ export default function Layout() {
   return (
     <div className="min-h-screen bg-gray-50 flex">
       <aside className="w-56 bg-white border-r border-gray-200 p-4 flex flex-col fixed h-full">
-        <h1 className="text-xl font-bold text-indigo-600 mb-6 px-3">FitTracker</h1>
+        <h1 className="text-xl font-bold text-indigo-600 mb-1 px-3">FitBot</h1>
+        <a href="https://instagram.com/fit_bot_124" target="_blank" rel="noopener noreferrer" className="text-xs text-gray-400 hover:text-indigo-500 px-3 mb-5 block">@fit_bot_124</a>
         <nav className="flex flex-col gap-1 flex-1">
           {navItems.map(({ path, label }) => (
             <NavLink

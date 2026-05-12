@@ -84,6 +84,16 @@ public class WorkoutController {
         return sessionRepository.save(existing);
     }
 
+    @GetMapping("/last")
+    public WorkoutSession getLast(@RequestParam String name, HttpServletRequest request) {
+        String userId = (String) request.getAttribute("userId");
+        List<WorkoutSession> sessions = sessionRepository.findByUserId(userId);
+        return sessions.stream()
+                .filter(s -> s.getName() != null && s.getName().equalsIgnoreCase(name))
+                .max(java.util.Comparator.comparing(WorkoutSession::getDate))
+                .orElse(null);
+    }
+
     @DeleteMapping("/{id}")
     public void delete(@PathVariable Long id) {
         sessionRepository.deleteById(id);

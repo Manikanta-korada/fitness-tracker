@@ -4,6 +4,7 @@ import { mealsApi } from '../api/client';
 export default function MealLibrary() {
   const [meals, setMeals] = useState([]);
   const [showForm, setShowForm] = useState(false);
+  const [search, setSearch] = useState('');
   const [name, setName] = useState('');
   const [calories, setCalories] = useState('');
   const [protein, setProtein] = useState('');
@@ -78,8 +79,16 @@ export default function MealLibrary() {
         </form>
       )}
 
+      <input
+        type="text"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder="Search meals..."
+        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm mb-6"
+      />
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {meals.map((meal) => (
+        {meals.filter((m) => m.name.toLowerCase().includes(search.toLowerCase())).map((meal) => (
           <div key={meal.id} className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
             <div className="flex justify-between items-start mb-2">
               <h3 className="font-semibold text-gray-900 text-sm">{meal.name}</h3>

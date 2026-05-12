@@ -8,6 +8,12 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (import.meta.env.DEV) {
+      setUser({ id: 'local-dev-user', email: 'dev@local' });
+      setLoading(false);
+      return;
+    }
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       setLoading(false);
@@ -21,6 +27,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   async function signOut() {
+    if (import.meta.env.DEV) return;
     await supabase.auth.signOut();
     setUser(null);
   }

@@ -3,10 +3,12 @@ import { supabase } from '../lib/supabase';
 const BASE = import.meta.env.VITE_API_URL || '/api';
 
 async function request(path, options = {}) {
-  const { data: { session } } = await supabase.auth.getSession();
   const headers = { 'Content-Type': 'application/json' };
-  if (session?.access_token) {
-    headers['Authorization'] = `Bearer ${session.access_token}`;
+  if (!import.meta.env.DEV) {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.access_token) {
+      headers['Authorization'] = `Bearer ${session.access_token}`;
+    }
   }
   const res = await fetch(`${BASE}${path}`, {
     headers,
@@ -42,6 +44,7 @@ export const workoutsApi = {
   create: (session) => request('/workouts', { method: 'POST', body: JSON.stringify(session) }),
   update: (id, session) => request(`/workouts/${id}`, { method: 'PUT', body: JSON.stringify(session) }),
   delete: (id) => request(`/workouts/${id}`, { method: 'DELETE' }),
+  getLast: (name) => request(`/workouts/last?name=${encodeURIComponent(name)}`),
 };
 
 export const templatesApi = {
@@ -55,6 +58,8 @@ export const dietApi = {
   getByDate: (date) => request(`/diet?date=${date}`),
   create: (entry) => request('/diet', { method: 'POST', body: JSON.stringify(entry) }),
   delete: (id) => request(`/diet/${id}`, { method: 'DELETE' }),
+  copyDay: (from, to) => request(`/diet/copy?from=${from}&to=${to}`, { method: 'POST' }),
+  getRecent: () => request('/diet/recent'),
 };
 
 export const progressApi = {
@@ -66,6 +71,10 @@ export const progressApi = {
   getMealBreakdown: (from, to) => request(`/progress/meal-breakdown?from=${from}&to=${to}`),
   getWorkoutFrequency: (from, to) => request(`/progress/workout-frequency?from=${from}&to=${to}`),
   getMuscleVolume: (from, to) => request(`/progress/muscle-volume?from=${from}&to=${to}`),
+  getMealRecommendations: () => request('/progress/recommendations/meals'),
+  getMuscleGroupRecommendation: () => request('/progress/recommendations/muscle-group'),
+  getWeeklyStreak: () => request('/progress/weekly-streak'),
+  getPersonalRecords: () => request('/progress/personal-records'),
 };
 
 export const targetsApi = {
@@ -85,4 +94,11 @@ export const sleepApi = {
   create: (entry) => request('/sleep', { method: 'POST', body: JSON.stringify(entry) }),
   delete: (id) => request(`/sleep/${id}`, { method: 'DELETE' }),
   getTrend: (from, to) => request(`/sleep/trend?from=${from}&to=${to}`),
+};
+
+export const healthNotesApi = {
+  getByDate: (date) => request(`/health-notes?date=${date}`),
+  create: (note) => request('/health-notes', { method: 'POST', body: JSON.stringify(note) }),
+  delete: (id) => request(`/health-notes/${id}`, { method: 'DELETE' }),
+  getTrend: (from, to) => request(`/health-notes/trend?from=${from}&to=${to}`),
 };

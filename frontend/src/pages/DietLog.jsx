@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
-import { dietApi, mealsApi, targetsApi, waterApi, sleepApi } from '../api/client';
+import { dietApi, mealsApi, targetsApi, waterApi, sleepApi, healthNotesApi } from '../api/client';
 
-const MEAL_TYPES = ['Breakfast', 'Pre-Workout', 'Lunch', 'Snacks', 'Post-Workout', 'Dinner'];
+const MEAL_TYPES = ['Pre-Workout', 'Post-Workout', 'Breakfast', 'Lunch', 'Snacks', 'Dinner', 'Miscellaneous'];
 
 export default function DietLog() {
   const [logs, setLogs] = useState([]);
   const [meals, setMeals] = useState([]);
   const [targets, setTargets] = useState(null);
+  const [recentMeals, setRecentMeals] = useState([]);
   const [selectedMealId, setSelectedMealId] = useState('');
   const [servings, setServings] = useState(1);
   const [mealType, setMealType] = useState('Breakfast');
@@ -22,6 +23,9 @@ export default function DietLog() {
   const [sleepLogs, setSleepLogs] = useState([]);
   const [bedtime, setBedtime] = useState('23:00');
   const [wakeTime, setWakeTime] = useState('07:00');
+  const [healthNotes, setHealthNotes] = useState([]);
+  const [noteText, setNoteText] = useState('');
+  const [noteSeverity, setNoteSeverity] = useState('info');
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
 
   useEffect(() => {
@@ -41,6 +45,27 @@ export default function DietLog() {
     setTargets(t);
     setWaterLogs(w);
     setSleepLogs(s);
+    dietApi.getRecent().then(setRecentMeals).catch(() => {});
+    healthNotesApi.getByDate(selectedDate).then(setHealthNotes).catch(() => {});
+  }
+
+  async function handleAddNote(e) {
+    e.preventDefault();
+    await healthNotesApi.create({ date: selectedDate, note: noteText, severity: noteSeverity });
+    setNoteText('');
+    setNoteSeverity('info');
+    loadData();
+  }
+
+  async function handleDeleteNote(id) {
+    await healthNotesApi.delete(id);
+    loadData();
+  }
+
+  async function handleCopyYesterday() {
+    const yesterday = new Date(new Date(selectedDate).getTime() - 86400000).toISOString().split('T')[0];
+    await dietApi.copyDay(yesterday, selectedDate);
+    loadData();
   }
 
   async function handleAddMeal(e) {
@@ -127,8 +152,14 @@ export default function DietLog() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Diet Log</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Log Meal</h1>
         <div className="flex items-center gap-2">
+          <button
+            onClick={handleCopyYesterday}
+            className="px-3 py-1.5 bg-green-50 text-green-700 rounded-lg text-xs font-medium hover:bg-green-100"
+          >
+            Copy Yesterday
+          </button>
           <button
             onClick={() => setSelectedDate(new Date(new Date(selectedDate).getTime() - 86400000).toISOString().split('T')[0])}
             className="px-2 py-1 bg-gray-100 rounded-lg text-sm hover:bg-gray-200"
@@ -152,6 +183,31 @@ export default function DietLog() {
         <MiniStat label="Carbs" value={totalCarbs.toFixed(1)} target={targets?.carbsTargetG} unit="g" />
         <MiniStat label="Fat" value={totalFat.toFixed(1)} target={targets?.fatTargetG} unit="g" />
       </div>
+
+      {recentMeals.length > 0 && (
+        <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm mb-4">
+          <p className="text-xs font-semibold text-gray-500 mb-2">Quick Add (Recent)</p>
+          <div className="flex flex-wrap gap-2">
+            {recentMeals.slice(0, 6).map((rec, idx) => (
+              <button
+                key={idx}
+                type="button"
+                onClick={async () => {
+                  if (rec.mealId) {
+                    await dietApi.create({ date: selectedDate, mealType, meal: { id: rec.mealId }, servings: 1 });
+                  } else {
+                    await dietApi.create({ date: selectedDate, mealType, customName: rec.name, calories: rec.calories, proteinG: rec.proteinG, carbsG: 0, fatG: 0, servings: 1 });
+                  }
+                  loadData();
+                }}
+                className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-700 hover:bg-indigo-50 hover:border-indigo-200"
+              >
+                {rec.name} <span className="text-gray-400">({rec.calories} kcal)</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <form onSubmit={handleAddMeal} className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm mb-6">
         <div className="flex gap-3 mb-4 items-center">
@@ -418,6 +474,63 @@ export default function DietLog() {
                 <li key={w.id} className="flex justify-between items-center text-sm">
                   <span className="text-gray-600">{w.type} — {w.amountMl} ml</span>
                   <button onClick={() => handleDeleteWater(w.id)} className="text-red-400 text-xs hover:text-red-600">Remove</button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+
+      {/* Health Notes Section */}
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm mt-6">
+        <div className="p-4 border-b border-gray-100">
+          <h2 className="font-semibold text-gray-900">Health Notes</h2>
+        </div>
+        <div className="p-4">
+          <form onSubmit={handleAddNote} className="flex gap-3 items-end mb-4">
+            <div className="flex-1">
+              <label className="block text-xs text-gray-500 mb-1">Note</label>
+              <input
+                type="text"
+                value={noteText}
+                onChange={(e) => setNoteText(e.target.value)}
+                placeholder="e.g., Felt dizzy after workout..."
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Severity</label>
+              <select
+                value={noteSeverity}
+                onChange={(e) => setNoteSeverity(e.target.value)}
+                className="border border-gray-200 rounded-lg px-3 py-2 text-sm"
+              >
+                <option value="info">Info</option>
+                <option value="warning">Warning</option>
+                <option value="serious">Serious</option>
+              </select>
+            </div>
+            <button type="submit" className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700">
+              Add
+            </button>
+          </form>
+
+          {healthNotes.length > 0 && (
+            <ul className="space-y-2">
+              {healthNotes.map((n) => (
+                <li key={n.id} className={`flex justify-between items-center rounded-lg px-4 py-3 ${
+                  n.severity === 'serious' ? 'bg-red-50' : n.severity === 'warning' ? 'bg-yellow-50' : 'bg-blue-50'
+                }`}>
+                  <div>
+                    <p className={`text-sm font-medium ${
+                      n.severity === 'serious' ? 'text-red-700' : n.severity === 'warning' ? 'text-yellow-700' : 'text-blue-700'
+                    }`}>{n.note}</p>
+                    <span className={`text-xs ${
+                      n.severity === 'serious' ? 'text-red-500' : n.severity === 'warning' ? 'text-yellow-500' : 'text-blue-500'
+                    }`}>{n.severity}</span>
+                  </div>
+                  <button onClick={() => handleDeleteNote(n.id)} className="text-red-400 text-xs hover:text-red-600">Remove</button>
                 </li>
               ))}
             </ul>

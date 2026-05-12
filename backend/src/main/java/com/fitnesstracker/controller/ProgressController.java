@@ -1,9 +1,7 @@
 package com.fitnesstracker.controller;
 
 import com.fitnesstracker.model.*;
-import com.fitnesstracker.repository.BodyWeightRepository;
-import com.fitnesstracker.repository.DietLogRepository;
-import com.fitnesstracker.repository.WorkoutSessionRepository;
+import com.fitnesstracker.repository.*;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
@@ -20,13 +18,19 @@ public class ProgressController {
     private final BodyWeightRepository bodyWeightRepository;
     private final WorkoutSessionRepository workoutSessionRepository;
     private final DietLogRepository dietLogRepository;
+    private final DailyTargetRepository dailyTargetRepository;
+    private final MealRepository mealRepository;
 
     public ProgressController(BodyWeightRepository bodyWeightRepository,
                               WorkoutSessionRepository workoutSessionRepository,
-                              DietLogRepository dietLogRepository) {
+                              DietLogRepository dietLogRepository,
+                              DailyTargetRepository dailyTargetRepository,
+                              MealRepository mealRepository) {
         this.bodyWeightRepository = bodyWeightRepository;
         this.workoutSessionRepository = workoutSessionRepository;
         this.dietLogRepository = dietLogRepository;
+        this.dailyTargetRepository = dailyTargetRepository;
+        this.mealRepository = mealRepository;
     }
 
     @GetMapping("/weight")
@@ -131,7 +135,7 @@ public class ProgressController {
         List<DietLog> logs = dietLogRepository.findByUserIdAndDateBetween(userId, from, to);
 
         Map<String, Integer> byType = new LinkedHashMap<>();
-        for (String type : List.of("Breakfast", "Pre-Workout", "Lunch", "Snacks", "Post-Workout", "Dinner")) {
+        for (String type : List.of("Pre-Workout", "Post-Workout", "Breakfast", "Lunch", "Snacks", "Dinner", "Miscellaneous")) {
             byType.put(type, 0);
         }
         for (DietLog log : logs) {
@@ -203,6 +207,140 @@ public class ProgressController {
                     point.put("volume", Math.round(e.getValue()));
                     return point;
                 })
+                .collect(Collectors.toList());
+    }
+
+    @GetMapping("/recommendations/meals")
+    public List<Map<String, Object>> getMealRecommendations(HttpServletRequest request) {
+        String userId = (String) request.getAttribute("userId");
+        List<DailyTarget> targets = dailyTargetRepository.findAll();
+        if (targets.isEmpty()) return List.of();
+        DailyTarget target = targets.get(0);
+
+        List<DietLog> todayLogs = dietLogRepository.findByUserIdAndDate(userId, LocalDate.now());
+        int consumedCalories = todayLogs.stream().mapToInt(DietLog::getCalories).sum();
+        double consumedProtein = todayLogs.stream().mapToDouble(DietLog::getProteinG).sum();
+        double consumedCarbs = todayLogs.stream().mapToDouble(DietLog::getCarbsG).sum();
+        double consumedFat = todayLogs.stream().mapToDouble(DietLog::getFatG).sum();
+
+        int remainingCalories = target.getCalorieTarget() - consumedCalories;
+        double remainingProtein = target.getProteinTargetG() - consumedProtein;
+        double remainingCarbs = target.getCarbsTargetG() - consumedCarbs;
+        double remainingFat = target.getFatTargetG() - consumedFat;
+
+        List<Meal> meals = mealRepository.findAll();
+        return meals.stream()
+                .filter(m -> m.getCalories() <= Math.max(remainingCalories, 0))
+                .sorted((a, b) -> Double.compare(b.getProteinG(), a.getProteinG()))
+                .limit(5)
+                .map(m -> {
+                    Map<String, Object> rec = new HashMap<>();
+                    rec.put("id", m.getId());
+                    rec.put("name", m.getName());
+                    rec.put("calories", m.getCalories());
+                    rec.put("proteinG", m.getProteinG());
+                    rec.put("carbsG", m.getCarbsG());
+                    rec.put("fatG", m.getFatG());
+                    if (remainingProtein > 0) {
+                        rec.put("reason", String.format("You need %.0fg more protein", remainingProtein));
+                    } else if (remainingCalories > 0) {
+                        rec.put("reason", String.format("You have %d kcal remaining", remainingCalories));
+                    } else {
+                        rec.put("reason", "Fits your remaining budget");
+                    }
+                    return rec;
+                })
+                .collect(Collectors.toList());
+    }
+
+    @GetMapping("/recommendations/muscle-group")
+    public Map<String, Object> getMuscleGroupRecommendation(HttpServletRequest request) {
+        String userId = (String) request.getAttribute("userId");
+        LocalDate today = LocalDate.now();
+        List<WorkoutSession> recentSessions = workoutSessionRepository.findByUserIdAndDateBetween(userId, today.minusDays(7), today);
+
+        List<String> allGroups = List.of("Chest", "Back", "Shoulders", "Legs", "Biceps", "Triceps", "Core");
+        Map<String, LocalDate> lastTrained = new HashMap<>();
+        for (String group : allGroups) {
+            lastTrained.put(group, null);
+        }
+
+        for (WorkoutSession session : recentSessions) {
+            for (WorkoutEntry entry : session.getEntries()) {
+                if (entry.getExercise() != null) {
+                    String group = entry.getExercise().getMuscleGroup();
+                    if (lastTrained.containsKey(group)) {
+                        LocalDate current = lastTrained.get(group);
+                        if (current == null || session.getDate().isAfter(current)) {
+                            lastTrained.put(group, session.getDate());
+                        }
+                    }
+                }
+            }
+        }
+
+        String leastRecent = null;
+        long maxDays = -1;
+        for (Map.Entry<String, LocalDate> e : lastTrained.entrySet()) {
+            long days = e.getValue() == null ? 8 : java.time.temporal.ChronoUnit.DAYS.between(e.getValue(), today);
+            if (days > maxDays) {
+                maxDays = days;
+                leastRecent = e.getKey();
+            }
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("muscleGroup", leastRecent);
+        result.put("daysSinceLastTrained", maxDays > 7 ? "7+" : maxDays);
+        return result;
+    }
+
+    @GetMapping("/weekly-streak")
+    public Map<String, Object> getWeeklyStreak(HttpServletRequest request) {
+        String userId = (String) request.getAttribute("userId");
+        LocalDate today = LocalDate.now();
+        LocalDate monday = today.minusDays(today.getDayOfWeek().getValue() - 1);
+        List<WorkoutSession> weekSessions = workoutSessionRepository.findByUserIdAndDateBetween(userId, monday, today);
+
+        long daysLogged = weekSessions.stream()
+                .map(WorkoutSession::getDate)
+                .distinct()
+                .count();
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("daysLogged", daysLogged);
+        result.put("totalDays", 7);
+        result.put("weekStart", monday);
+        return result;
+    }
+
+    @GetMapping("/personal-records")
+    public List<Map<String, Object>> getPersonalRecords(HttpServletRequest request) {
+        String userId = (String) request.getAttribute("userId");
+        List<WorkoutSession> sessions = workoutSessionRepository.findByUserId(userId);
+
+        Map<Long, Map<String, Object>> prs = new HashMap<>();
+        for (WorkoutSession session : sessions) {
+            for (WorkoutEntry entry : session.getEntries()) {
+                if (entry.getExercise() == null) continue;
+                Long exId = entry.getExercise().getId();
+                for (ExerciseSet set : entry.getSets()) {
+                    Map<String, Object> current = prs.get(exId);
+                    if (current == null || set.getWeightKg() > (double) current.get("maxWeightKg")) {
+                        Map<String, Object> pr = new HashMap<>();
+                        pr.put("exerciseId", exId);
+                        pr.put("exerciseName", entry.getExercise().getName());
+                        pr.put("muscleGroup", entry.getExercise().getMuscleGroup());
+                        pr.put("maxWeightKg", set.getWeightKg());
+                        pr.put("date", session.getDate());
+                        prs.put(exId, pr);
+                    }
+                }
+            }
+        }
+
+        return prs.values().stream()
+                .sorted((a, b) -> ((String) a.get("muscleGroup")).compareTo((String) b.get("muscleGroup")))
                 .collect(Collectors.toList());
     }
 }

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import { progressApi, exercisesApi, targetsApi, waterApi, sleepApi } from '../api/client';
+import { progressApi, exercisesApi, targetsApi, waterApi, sleepApi, healthNotesApi } from '../api/client';
 
 export default function Progress() {
   const [weightData, setWeightData] = useState([]);
@@ -22,6 +22,8 @@ export default function Progress() {
   const [workoutFrequency, setWorkoutFrequency] = useState([]);
   const [muscleVolume, setMuscleVolume] = useState([]);
   const [sleepTrend, setSleepTrend] = useState([]);
+  const [personalRecords, setPersonalRecords] = useState([]);
+  const [healthTimeline, setHealthTimeline] = useState([]);
 
   useEffect(() => {
     loadData();
@@ -64,6 +66,8 @@ export default function Progress() {
     setWorkoutFrequency(wkFreq);
     setMuscleVolume(musVol);
     setSleepTrend(sleepData);
+    progressApi.getPersonalRecords().then(setPersonalRecords).catch(() => {});
+    healthNotesApi.getTrend(from, to).then(setHealthTimeline).catch(() => {});
   }
 
   async function loadExerciseProgress(exerciseId) {
@@ -347,6 +351,56 @@ export default function Progress() {
             <p className="text-gray-400 text-sm">{selectedExercise ? 'No data for this exercise yet.' : 'Select an exercise to view progress.'}</p>
           )}
         </div>
+
+        {/* Personal Records */}
+        {personalRecords.length > 0 && (
+          <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm lg:col-span-2">
+            <h2 className="font-semibold text-gray-900 mb-4">Personal Records</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {Object.entries(personalRecords.reduce((groups, pr) => {
+                const g = pr.muscleGroup || 'Other';
+                (groups[g] = groups[g] || []).push(pr);
+                return groups;
+              }, {})).map(([group, prs]) => (
+                <div key={group}>
+                  <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">{group}</h3>
+                  <ul className="space-y-1">
+                    {prs.map((pr) => (
+                      <li key={pr.exerciseId} className="flex justify-between text-sm bg-gray-50 rounded-lg px-3 py-2">
+                        <span className="text-gray-700">{pr.exerciseName}</span>
+                        <span className="font-bold text-indigo-600">{pr.maxWeightKg} kg</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Health Timeline */}
+        {healthTimeline.length > 0 && (
+          <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm lg:col-span-2">
+            <h2 className="font-semibold text-gray-900 mb-4">Health Timeline (30 Days)</h2>
+            <div className="space-y-3">
+              {healthTimeline.map((n) => (
+                <div key={n.id} className={`rounded-lg px-4 py-3 flex items-start gap-3 ${
+                  n.severity === 'serious' ? 'bg-red-50' : n.severity === 'warning' ? 'bg-yellow-50' : 'bg-blue-50'
+                }`}>
+                  <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${
+                    n.severity === 'serious' ? 'bg-red-500' : n.severity === 'warning' ? 'bg-yellow-500' : 'bg-blue-500'
+                  }`} />
+                  <div>
+                    <p className={`text-sm font-medium ${
+                      n.severity === 'serious' ? 'text-red-700' : n.severity === 'warning' ? 'text-yellow-700' : 'text-blue-700'
+                    }`}>{n.note}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">{n.date}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

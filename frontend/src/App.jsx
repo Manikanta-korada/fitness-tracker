@@ -3,7 +3,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import WorkoutLog from './pages/WorkoutLog';
-import WorkoutTemplates from './pages/WorkoutTemplates';
+import ExerciseLibrary from './pages/ExerciseLibrary';
 import DietLog from './pages/DietLog';
 import MealLibrary from './pages/MealLibrary';
 import Progress from './pages/Progress';
@@ -29,7 +29,7 @@ function ProtectedApp() {
       <Route element={<Layout />}>
         <Route path="/" element={<Dashboard />} />
         <Route path="/workouts" element={<WorkoutLog />} />
-        <Route path="/templates" element={<WorkoutTemplates />} />
+        <Route path="/exercise-library" element={<ExerciseLibrary />} />
         <Route path="/diet" element={<DietLog />} />
         <Route path="/meal-library" element={<MealLibrary />} />
         <Route path="/progress" element={<Progress />} />
