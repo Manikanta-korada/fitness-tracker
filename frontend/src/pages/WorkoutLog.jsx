@@ -16,6 +16,8 @@ export default function WorkoutLog() {
   const [templateEntries, setTemplateEntries] = useState([]);
   const [viewDate, setViewDate] = useState(new Date().toISOString().split('T')[0]);
   const [expandedSession, setExpandedSession] = useState(null);
+  const [calendarMonth, setCalendarMonth] = useState(new Date());
+  const [workoutDates, setWorkoutDates] = useState(new Set());
 
   useEffect(() => {
     exercisesApi.getAll().then(setExercises);
@@ -26,12 +28,26 @@ export default function WorkoutLog() {
     loadSessions();
   }, [viewDate]);
 
+  useEffect(() => {
+    loadMonthWorkouts();
+  }, [calendarMonth]);
+
   async function loadSessions() {
     setSessions(await workoutsApi.getAll(viewDate, viewDate));
   }
 
+  async function loadMonthWorkouts() {
+    const year = calendarMonth.getFullYear();
+    const month = calendarMonth.getMonth();
+    const from = new Date(year, month, 1).toISOString().split('T')[0];
+    const to = new Date(year, month + 1, 0).toISOString().split('T')[0];
+    const monthSessions = await workoutsApi.getAll(from, to);
+    setWorkoutDates(new Set(monthSessions.map(s => s.date)));
+  }
+
   async function loadData() {
     loadSessions();
+    loadMonthWorkouts();
     templatesApi.getAll().then(setTemplates);
   }
 
@@ -452,25 +468,85 @@ export default function WorkoutLog() {
         </form>
       )}
 
-      <div className="flex items-center gap-2 mb-4">
-        <button
-          onClick={() => setViewDate(new Date(new Date(viewDate).getTime() - 86400000).toISOString().split('T')[0])}
-          className="px-2 py-1 bg-gray-100 rounded-lg text-sm hover:bg-gray-200"
-        >←</button>
-        <input
-          type="date"
-          value={viewDate}
-          onChange={(e) => setViewDate(e.target.value)}
-          className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm"
-        />
-        <button
-          onClick={() => setViewDate(new Date(new Date(viewDate).getTime() + 86400000).toISOString().split('T')[0])}
-          className="px-2 py-1 bg-gray-100 rounded-lg text-sm hover:bg-gray-200"
-        >→</button>
-        <span className="text-xs text-gray-400 ml-2">
-          {viewDate === new Date().toISOString().split('T')[0] ? 'Today' : viewDate}
-        </span>
-      </div>
+      {(() => {
+        const today = new Date().toISOString().split('T')[0];
+        const year = calendarMonth.getFullYear();
+        const month = calendarMonth.getMonth();
+        const firstDay = new Date(year, month, 1);
+        const lastDay = new Date(year, month + 1, 0);
+        const startOffset = (firstDay.getDay() + 6) % 7;
+        const daysInMonth = lastDay.getDate();
+
+        const mondayOfWeek = new Date();
+        mondayOfWeek.setDate(mondayOfWeek.getDate() - ((mondayOfWeek.getDay() + 6) % 7));
+        const weekStart = mondayOfWeek.toISOString().split('T')[0];
+        const weekDays = [];
+        for (let i = 0; i < 6; i++) {
+          const d = new Date(mondayOfWeek);
+          d.setDate(d.getDate() + i);
+          weekDays.push(d.toISOString().split('T')[0]);
+        }
+        const weekLogged = weekDays.filter(d => workoutDates.has(d)).length;
+
+        return (
+          <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm mb-4">
+            <div className="flex items-center justify-between mb-3">
+              <button onClick={() => setCalendarMonth(new Date(year, month - 1, 1))} className="px-2 py-1 bg-gray-100 rounded-lg text-sm hover:bg-gray-200">←</button>
+              <h3 className="text-sm font-semibold text-gray-700">
+                {calendarMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+              </h3>
+              <button onClick={() => setCalendarMonth(new Date(year, month + 1, 1))} className="px-2 py-1 bg-gray-100 rounded-lg text-sm hover:bg-gray-200">→</button>
+            </div>
+
+            <div className="grid grid-cols-7 gap-1 mb-2">
+              {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(d => (
+                <span key={d} className="text-xs text-center text-gray-400 font-medium">{d}</span>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-7 gap-1">
+              {Array.from({ length: startOffset }).map((_, i) => (
+                <div key={`empty-${i}`} />
+              ))}
+              {Array.from({ length: daysInMonth }).map((_, i) => {
+                const day = i + 1;
+                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const dayOfWeek = new Date(year, month, day).getDay();
+                const isSunday = dayOfWeek === 0;
+                const isPast = dateStr < today;
+                const isToday = dateStr === today;
+                const isSelected = dateStr === viewDate;
+                const hasWorkout = workoutDates.has(dateStr);
+
+                let bgColor = '';
+                if (hasWorkout) bgColor = 'bg-green-100 text-green-700';
+                else if (isSunday) bgColor = 'bg-gray-100 text-gray-400';
+                else if (isPast) bgColor = 'bg-red-50 text-red-400';
+                else bgColor = 'bg-gray-50 text-gray-500';
+
+                return (
+                  <button
+                    key={day}
+                    onClick={() => setViewDate(dateStr)}
+                    className={`w-full aspect-square rounded-lg text-xs font-medium flex items-center justify-center transition-all ${bgColor} ${isSelected ? 'ring-2 ring-indigo-500' : ''} ${isToday ? 'ring-1 ring-indigo-300' : ''} hover:opacity-80`}
+                  >
+                    {day}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="mt-3 flex items-center justify-between">
+              <div className="flex gap-3 text-xs text-gray-500">
+                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-green-100 border border-green-300" /> Logged</span>
+                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-red-50 border border-red-200" /> Missed</span>
+                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-gray-100 border border-gray-300" /> Rest</span>
+              </div>
+              <span className="text-sm font-semibold text-indigo-600">{weekLogged}/6 <span className="text-xs font-normal text-gray-400">this week</span></span>
+            </div>
+          </div>
+        );
+      })()}
 
       <div className="space-y-3">
         {sessions.length === 0 && (
