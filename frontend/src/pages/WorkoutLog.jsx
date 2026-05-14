@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { workoutsApi, exercisesApi, templatesApi } from '../api/client';
+import Spinner from '../components/Spinner';
 
 export default function WorkoutLog() {
   const [activeTab, setActiveTab] = useState('log');
@@ -17,13 +18,16 @@ export default function WorkoutLog() {
   const [expandedSession, setExpandedSession] = useState(null);
   const [calendarMonth, setCalendarMonth] = useState(new Date());
   const [monthSessions, setMonthSessions] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const workoutDates = new Set(monthSessions.map(s => s.date));
   const sessions = monthSessions.filter(s => s.date === viewDate);
 
   useEffect(() => {
-    exercisesApi.getAll().then(setExercises);
-    templatesApi.getAll().then(setTemplates);
+    Promise.allSettled([
+      exercisesApi.getAll().then(setExercises),
+      templatesApi.getAll().then(setTemplates),
+    ]).finally(() => setLoading(false));
   }, []);
 
   useEffect(() => {
@@ -199,6 +203,8 @@ export default function WorkoutLog() {
     await templatesApi.delete(id);
     loadData();
   }
+
+  if (loading) return <Spinner />;
 
   return (
     <div>

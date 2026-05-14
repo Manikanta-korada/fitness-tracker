@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { dietApi, workoutsApi, targetsApi, waterApi, sleepApi, progressApi, healthNotesApi } from '../api/client';
+import Spinner from '../components/Spinner';
 
 export default function Dashboard() {
   const [dietLogs, setDietLogs] = useState([]);
@@ -13,26 +14,30 @@ export default function Dashboard() {
   const [muscleRec, setMuscleRec] = useState(null);
   const [weeklyStreak, setWeeklyStreak] = useState(null);
   const [healthNotes, setHealthNotes] = useState([]);
+  const [loading, setLoading] = useState(true);
   const today = new Date().toISOString().split('T')[0];
 
   useEffect(() => {
-    dietApi.getByDate(today).then(setDietLogs).catch(() => {});
-    workoutsApi.getAll(today, today).then(setWorkouts).catch(() => {});
-    targetsApi.get().then(setTargets).catch(() => {});
-    waterApi.getByDate(today).then(setWaterLogs).catch(() => {});
-    sleepApi.getByDate(today).then(setSleepLogs).catch(() => {});
-    progressApi.getMealRecommendations().then(setMealRecs).catch(() => {});
-    progressApi.getMuscleGroupRecommendation().then(setMuscleRec).catch(() => {});
-    progressApi.getWeeklyStreak().then(setWeeklyStreak).catch(() => {});
-    healthNotesApi.getByDate(today).then(setHealthNotes).catch(() => {});
-    const weekFrom = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-    waterApi.getTrend(weekFrom, today).then(setWaterWeekly).catch(() => {});
+    Promise.allSettled([
+      dietApi.getByDate(today).then(setDietLogs),
+      workoutsApi.getAll(today, today).then(setWorkouts),
+      targetsApi.get().then(setTargets),
+      waterApi.getByDate(today).then(setWaterLogs),
+      sleepApi.getByDate(today).then(setSleepLogs),
+      progressApi.getMealRecommendations().then(setMealRecs),
+      progressApi.getMuscleGroupRecommendation().then(setMuscleRec),
+      progressApi.getWeeklyStreak().then(setWeeklyStreak),
+      healthNotesApi.getByDate(today).then(setHealthNotes),
+      waterApi.getTrend(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], today).then(setWaterWeekly),
+    ]).finally(() => setLoading(false));
   }, []);
 
   const totalCalories = dietLogs.reduce((sum, l) => sum + l.calories, 0);
   const totalProtein = dietLogs.reduce((sum, l) => sum + l.proteinG, 0);
   const totalCarbs = dietLogs.reduce((sum, l) => sum + l.carbsG, 0);
   const totalFat = dietLogs.reduce((sum, l) => sum + l.fatG, 0);
+
+  if (loading) return <Spinner />;
 
   return (
     <div>

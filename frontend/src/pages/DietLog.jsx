@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { dietApi, mealsApi, targetsApi, waterApi, sleepApi, healthNotesApi, progressApi } from '../api/client';
+import Spinner from '../components/Spinner';
 
 const MEAL_TYPES = ['Pre-Workout', 'Post-Workout', 'Breakfast', 'Lunch', 'Snacks', 'Dinner', 'Miscellaneous'];
 
@@ -29,6 +30,7 @@ export default function DietLog() {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [calendarMonth, setCalendarMonth] = useState(new Date());
   const [monthCalories, setMonthCalories] = useState({});
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadData();
@@ -39,6 +41,7 @@ export default function DietLog() {
   }, [calendarMonth]);
 
   async function loadData() {
+    setLoading(true);
     const [l, m, t, w, s] = await Promise.allSettled([
       dietApi.getByDate(selectedDate),
       mealsApi.getAll(),
@@ -51,6 +54,7 @@ export default function DietLog() {
     setTargets(t.status === 'fulfilled' ? t.value : null);
     setWaterLogs(w.status === 'fulfilled' ? w.value : []);
     setSleepLogs(s.status === 'fulfilled' ? s.value : []);
+    setLoading(false);
     dietApi.getRecent().then(setRecentMeals).catch(() => {});
     healthNotesApi.getByDate(selectedDate).then(setHealthNotes).catch(() => {});
   }
@@ -165,6 +169,8 @@ export default function DietLog() {
   })).filter((g) => g.entries.length > 0);
 
   const uncategorized = logs.filter((l) => !l.mealType || !MEAL_TYPES.includes(l.mealType));
+
+  if (loading) return <Spinner />;
 
   return (
     <div>

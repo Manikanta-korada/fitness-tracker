@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { progressApi, exercisesApi, targetsApi, waterApi, sleepApi, healthNotesApi } from '../api/client';
+import Spinner from '../components/Spinner';
 
 export default function Progress() {
   const [weightData, setWeightData] = useState([]);
@@ -24,31 +25,33 @@ export default function Progress() {
   const [sleepTrend, setSleepTrend] = useState([]);
   const [personalRecords, setPersonalRecords] = useState([]);
   const [healthTimeline, setHealthTimeline] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadData();
   }, []);
 
   async function loadData() {
-    const [w, e, t] = await Promise.all([
+    const [w, e, t] = await Promise.allSettled([
       progressApi.getWeight(),
       exercisesApi.getAll(),
       targetsApi.get(),
     ]);
-    setWeightData(w);
-    setExercises(e);
-    setTargets(t);
-    if (t) {
-      setTargetCalories(t.calorieTarget || '');
-      setTargetProtein(t.proteinTargetG || '');
-      setTargetCarbs(t.carbsTargetG || '');
-      setTargetFat(t.fatTargetG || '');
+    setWeightData(w.status === 'fulfilled' ? w.value : []);
+    setExercises(e.status === 'fulfilled' ? e.value : []);
+    const targetsVal = t.status === 'fulfilled' ? t.value : null;
+    setTargets(targetsVal);
+    if (targetsVal) {
+      setTargetCalories(targetsVal.calorieTarget || '');
+      setTargetProtein(targetsVal.proteinTargetG || '');
+      setTargetCarbs(targetsVal.carbsTargetG || '');
+      setTargetFat(targetsVal.fatTargetG || '');
     }
 
     const to = new Date().toISOString().split('T')[0];
     const from = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
     const weekFrom = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-    const [cal, waterWeek, waterMonth, macros, mealBrkdwn, wkFreq, musVol, sleepData] = await Promise.all([
+    const [cal, waterWeek, waterMonth, macros, mealBrkdwn, wkFreq, musVol, sleepData] = await Promise.allSettled([
       progressApi.getCalories(from, to),
       waterApi.getTrend(weekFrom, to),
       waterApi.getTrend(from, to),
@@ -58,14 +61,15 @@ export default function Progress() {
       progressApi.getMuscleVolume(from, to),
       sleepApi.getTrend(from, to),
     ]);
-    setCalorieData(cal);
-    setWaterWeekly(waterWeek);
-    setWaterMonthly(waterMonth);
-    setMacroData(macros);
-    setMealBreakdown(mealBrkdwn);
-    setWorkoutFrequency(wkFreq);
-    setMuscleVolume(musVol);
-    setSleepTrend(sleepData);
+    setCalorieData(cal.status === 'fulfilled' ? cal.value : []);
+    setWaterWeekly(waterWeek.status === 'fulfilled' ? waterWeek.value : []);
+    setWaterMonthly(waterMonth.status === 'fulfilled' ? waterMonth.value : []);
+    setMacroData(macros.status === 'fulfilled' ? macros.value : []);
+    setMealBreakdown(mealBrkdwn.status === 'fulfilled' ? mealBrkdwn.value : []);
+    setWorkoutFrequency(wkFreq.status === 'fulfilled' ? wkFreq.value : []);
+    setMuscleVolume(musVol.status === 'fulfilled' ? musVol.value : []);
+    setSleepTrend(sleepData.status === 'fulfilled' ? sleepData.value : []);
+    setLoading(false);
     progressApi.getPersonalRecords().then(setPersonalRecords).catch(() => {});
     healthNotesApi.getTrend(from, to).then(setHealthTimeline).catch(() => {});
   }
@@ -96,6 +100,8 @@ export default function Progress() {
     setShowTargetForm(false);
     setTargets(await targetsApi.get());
   }
+
+  if (loading) return <Spinner />;
 
   return (
     <div>
