@@ -35,13 +35,6 @@ public class WaterController {
         if (intake.getDate() == null) {
             intake.setDate(LocalDate.now());
         }
-        if ("Coconut Water".equals(intake.getType())) {
-            double factor = intake.getAmountMl() / 100.0;
-            intake.setCalories((int) Math.round(19 * factor));
-            intake.setProteinG(Math.round(0.7 * factor * 10.0) / 10.0);
-            intake.setCarbsG(Math.round(3.7 * factor * 10.0) / 10.0);
-            intake.setFatG(Math.round(0.2 * factor * 10.0) / 10.0);
-        }
         return repository.save(intake);
     }
 

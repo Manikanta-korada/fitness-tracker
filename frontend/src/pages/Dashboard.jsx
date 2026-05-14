@@ -29,17 +29,10 @@ export default function Dashboard() {
     waterApi.getTrend(weekFrom, today).then(setWaterWeekly);
   }, []);
 
-  const waterNutrients = waterLogs.reduce((acc, w) => ({
-    calories: acc.calories + (w.calories || 0),
-    proteinG: acc.proteinG + (w.proteinG || 0),
-    carbsG: acc.carbsG + (w.carbsG || 0),
-    fatG: acc.fatG + (w.fatG || 0),
-  }), { calories: 0, proteinG: 0, carbsG: 0, fatG: 0 });
-
-  const totalCalories = dietLogs.reduce((sum, l) => sum + l.calories, 0) + waterNutrients.calories;
-  const totalProtein = dietLogs.reduce((sum, l) => sum + l.proteinG, 0) + waterNutrients.proteinG;
-  const totalCarbs = dietLogs.reduce((sum, l) => sum + l.carbsG, 0) + waterNutrients.carbsG;
-  const totalFat = dietLogs.reduce((sum, l) => sum + l.fatG, 0) + waterNutrients.fatG;
+  const totalCalories = dietLogs.reduce((sum, l) => sum + l.calories, 0);
+  const totalProtein = dietLogs.reduce((sum, l) => sum + l.proteinG, 0);
+  const totalCarbs = dietLogs.reduce((sum, l) => sum + l.carbsG, 0);
+  const totalFat = dietLogs.reduce((sum, l) => sum + l.fatG, 0);
 
   return (
     <div>

@@ -20,20 +20,17 @@ public class ProgressController {
     private final DietLogRepository dietLogRepository;
     private final DailyTargetRepository dailyTargetRepository;
     private final MealRepository mealRepository;
-    private final WaterIntakeRepository waterIntakeRepository;
 
     public ProgressController(BodyWeightRepository bodyWeightRepository,
                               WorkoutSessionRepository workoutSessionRepository,
                               DietLogRepository dietLogRepository,
                               DailyTargetRepository dailyTargetRepository,
-                              MealRepository mealRepository,
-                              WaterIntakeRepository waterIntakeRepository) {
+                              MealRepository mealRepository) {
         this.bodyWeightRepository = bodyWeightRepository;
         this.workoutSessionRepository = workoutSessionRepository;
         this.dietLogRepository = dietLogRepository;
         this.dailyTargetRepository = dailyTargetRepository;
         this.mealRepository = mealRepository;
-        this.waterIntakeRepository = waterIntakeRepository;
     }
 
     @GetMapping("/weight")
@@ -89,16 +86,9 @@ public class ProgressController {
             HttpServletRequest request) {
         String userId = (String) request.getAttribute("userId");
         List<DietLog> logs = dietLogRepository.findByUserIdAndDateBetween(userId, from, to);
-        List<WaterIntake> waterLogs = waterIntakeRepository.findByUserIdAndDateBetween(userId, from, to);
 
-        Map<LocalDate, Integer> dailyCalories = new TreeMap<>(logs.stream()
-                .collect(Collectors.groupingBy(DietLog::getDate, Collectors.summingInt(DietLog::getCalories))));
-
-        for (WaterIntake w : waterLogs) {
-            if (w.getCalories() > 0) {
-                dailyCalories.merge(w.getDate(), w.getCalories(), Integer::sum);
-            }
-        }
+        Map<LocalDate, Integer> dailyCalories = logs.stream()
+                .collect(Collectors.groupingBy(DietLog::getDate, Collectors.summingInt(DietLog::getCalories)));
 
         return dailyCalories.entrySet().stream()
                 .sorted(Map.Entry.comparingByKey())
@@ -118,42 +108,22 @@ public class ProgressController {
             HttpServletRequest request) {
         String userId = (String) request.getAttribute("userId");
         List<DietLog> logs = dietLogRepository.findByUserIdAndDateBetween(userId, from, to);
-        List<WaterIntake> waterLogs = waterIntakeRepository.findByUserIdAndDateBetween(userId, from, to);
 
         Map<LocalDate, List<DietLog>> byDate = logs.stream()
                 .collect(Collectors.groupingBy(DietLog::getDate));
 
-        Map<LocalDate, Map<String, Object>> results = new TreeMap<>();
-
-        for (Map.Entry<LocalDate, List<DietLog>> e : byDate.entrySet()) {
-            Map<String, Object> point = new HashMap<>();
-            point.put("date", e.getKey());
-            point.put("calories", e.getValue().stream().mapToInt(DietLog::getCalories).sum());
-            point.put("protein", e.getValue().stream().mapToDouble(DietLog::getProteinG).sum());
-            point.put("carbs", e.getValue().stream().mapToDouble(DietLog::getCarbsG).sum());
-            point.put("fat", e.getValue().stream().mapToDouble(DietLog::getFatG).sum());
-            results.put(e.getKey(), point);
-        }
-
-        for (WaterIntake w : waterLogs) {
-            if (w.getCalories() > 0) {
-                Map<String, Object> point = results.computeIfAbsent(w.getDate(), d -> {
-                    Map<String, Object> p = new HashMap<>();
-                    p.put("date", d);
-                    p.put("calories", 0);
-                    p.put("protein", 0.0);
-                    p.put("carbs", 0.0);
-                    p.put("fat", 0.0);
-                    return p;
-                });
-                point.put("calories", (int) point.get("calories") + w.getCalories());
-                point.put("protein", (double) point.get("protein") + w.getProteinG());
-                point.put("carbs", (double) point.get("carbs") + w.getCarbsG());
-                point.put("fat", (double) point.get("fat") + w.getFatG());
-            }
-        }
-
-        return new ArrayList<>(results.values());
+        return byDate.entrySet().stream()
+                .sorted(Map.Entry.comparingByKey())
+                .map(e -> {
+                    Map<String, Object> point = new HashMap<>();
+                    point.put("date", e.getKey());
+                    point.put("calories", e.getValue().stream().mapToInt(DietLog::getCalories).sum());
+                    point.put("protein", e.getValue().stream().mapToDouble(DietLog::getProteinG).sum());
+                    point.put("carbs", e.getValue().stream().mapToDouble(DietLog::getCarbsG).sum());
+                    point.put("fat", e.getValue().stream().mapToDouble(DietLog::getFatG).sum());
+                    return point;
+                })
+                .collect(Collectors.toList());
     }
 
     @GetMapping("/meal-breakdown")

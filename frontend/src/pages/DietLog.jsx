@@ -152,17 +152,10 @@ export default function DietLog() {
     return `${h}h ${m}m`;
   }
 
-  const waterNutrients = waterLogs.reduce((acc, w) => ({
-    calories: acc.calories + (w.calories || 0),
-    proteinG: acc.proteinG + (w.proteinG || 0),
-    carbsG: acc.carbsG + (w.carbsG || 0),
-    fatG: acc.fatG + (w.fatG || 0),
-  }), { calories: 0, proteinG: 0, carbsG: 0, fatG: 0 });
-
-  const totalCalories = logs.reduce((sum, l) => sum + l.calories, 0) + waterNutrients.calories;
-  const totalProtein = logs.reduce((sum, l) => sum + l.proteinG, 0) + waterNutrients.proteinG;
-  const totalCarbs = logs.reduce((sum, l) => sum + l.carbsG, 0) + waterNutrients.carbsG;
-  const totalFat = logs.reduce((sum, l) => sum + l.fatG, 0) + waterNutrients.fatG;
+  const totalCalories = logs.reduce((sum, l) => sum + l.calories, 0);
+  const totalProtein = logs.reduce((sum, l) => sum + l.proteinG, 0);
+  const totalCarbs = logs.reduce((sum, l) => sum + l.carbsG, 0);
+  const totalFat = logs.reduce((sum, l) => sum + l.fatG, 0);
 
   const selectedMeal = meals.find((m) => m.id === parseInt(selectedMealId));
 

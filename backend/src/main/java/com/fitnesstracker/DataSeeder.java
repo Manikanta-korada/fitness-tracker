@@ -24,6 +24,10 @@ public class DataSeeder implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
+        if (mealRepository.findAll().stream().noneMatch(m -> m.getName().equals("Coconut Water (100ml)"))) {
+            mealRepository.save(new Meal("Coconut Water (100ml)", 19, 0.7, 3.7, 0.2, false));
+        }
+
         if (exerciseRepository.count() > 0) return;
 
         // Chest - Barbell
