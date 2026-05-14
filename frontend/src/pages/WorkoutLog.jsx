@@ -276,7 +276,7 @@ export default function WorkoutLog() {
                       <span className="w-10 text-sm text-gray-500">{set.setNumber}</span>
                       <input type="number" value={set.reps} onChange={(e) => updateTemplateSet(entryIdx, setIdx, 'reps', e.target.value)} className="w-16 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center" min="0" />
                       <input type="number" value={set.weightKg} onChange={(e) => updateTemplateSet(entryIdx, setIdx, 'weightKg', e.target.value)} className="w-20 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center" step="0.5" />
-                      <input type="number" value={set.durationMinutes || ''} onChange={(e) => updateTemplateSet(entryIdx, setIdx, 'durationMinutes', e.target.value || null)} className="w-20 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center" placeholder="-" min="0" />
+                      <input type="number" value={set.durationMinutes || ''} onChange={(e) => updateTemplateSet(entryIdx, setIdx, 'durationMinutes', e.target.value || null)} className="w-20 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center" placeholder="-" min="0" step="0.01" />
                       <input type="number" value={set.distanceKm || ''} onChange={(e) => updateTemplateSet(entryIdx, setIdx, 'distanceKm', e.target.value || null)} className="w-20 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center" placeholder="-" step="0.1" min="0" />
                       <button type="button" onClick={() => removeTemplateSet(entryIdx, setIdx)} className="text-red-400 text-xs w-6">X</button>
                     </div>
@@ -429,6 +429,7 @@ export default function WorkoutLog() {
                     className="w-20 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center"
                     placeholder="-"
                     min="0"
+                    step="0.01"
                   />
                   <input
                     type="number"
