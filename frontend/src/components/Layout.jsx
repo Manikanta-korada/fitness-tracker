@@ -17,7 +17,7 @@ export default function Layout() {
     <div className="min-h-screen bg-gray-50 flex">
       <aside className="w-56 bg-white border-r border-gray-200 p-4 flex flex-col fixed h-full">
         <h1 className="text-xl font-bold text-indigo-600 mb-1 px-3">FitBot</h1>
-        <a href="https://instagram.com/fit_bot_124" target="_blank" rel="noopener noreferrer" className="text-xs text-gray-400 hover:text-indigo-500 px-3 mb-5 block">@fit_bot_124</a>
+        <a href="https://instagram.com/fit_man_i" target="_blank" rel="noopener noreferrer" className="text-xs text-gray-400 hover:text-indigo-500 px-3 mb-5 block">@fit_man_i</a>
         <nav className="flex flex-col gap-1 flex-1">
           {navItems.map(({ path, label }) => (
             <NavLink
