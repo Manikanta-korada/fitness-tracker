@@ -19,6 +19,7 @@ export default function WorkoutLog() {
   const [calendarMonth, setCalendarMonth] = useState(new Date());
   const [monthSessions, setMonthSessions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [sessionsLoading, setSessionsLoading] = useState(true);
 
   const workoutDates = new Set(monthSessions.map(s => s.date));
   const sessions = monthSessions.filter(s => s.date === viewDate);
@@ -35,11 +36,13 @@ export default function WorkoutLog() {
   }, [calendarMonth]);
 
   async function loadMonthWorkouts() {
+    setSessionsLoading(true);
     const year = calendarMonth.getFullYear();
     const month = calendarMonth.getMonth();
     const from = new Date(year, month, 1).toISOString().split('T')[0];
     const to = new Date(year, month + 1, 0).toISOString().split('T')[0];
     setMonthSessions(await workoutsApi.getAll(from, to));
+    setSessionsLoading(false);
   }
 
   async function loadData() {
@@ -548,7 +551,9 @@ export default function WorkoutLog() {
       })()}
 
       <div className="space-y-3">
-        {sessions.length === 0 && (
+        {sessionsLoading ? (
+          <div className="flex items-center justify-center py-6"><div className="w-6 h-6 border-3 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div></div>
+        ) : sessions.length === 0 && (
           <p className="text-gray-400 text-sm">No workouts logged for this date.</p>
         )}
         {sessions.map((session) => (
