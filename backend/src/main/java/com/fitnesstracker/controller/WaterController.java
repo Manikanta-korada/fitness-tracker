@@ -1,6 +1,8 @@
 package com.fitnesstracker.controller;
 
+import com.fitnesstracker.model.DietLog;
 import com.fitnesstracker.model.WaterIntake;
+import com.fitnesstracker.repository.DietLogRepository;
 import com.fitnesstracker.repository.WaterIntakeRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -15,9 +17,11 @@ import java.util.stream.Collectors;
 public class WaterController {
 
     private final WaterIntakeRepository repository;
+    private final DietLogRepository dietLogRepository;
 
-    public WaterController(WaterIntakeRepository repository) {
+    public WaterController(WaterIntakeRepository repository, DietLogRepository dietLogRepository) {
         this.repository = repository;
+        this.dietLogRepository = dietLogRepository;
     }
 
     @GetMapping
@@ -35,11 +39,37 @@ public class WaterController {
         if (intake.getDate() == null) {
             intake.setDate(LocalDate.now());
         }
-        return repository.save(intake);
+        WaterIntake saved = repository.save(intake);
+
+        if ("Coconut Water".equals(intake.getType())) {
+            double factor = intake.getAmountMl() / 100.0;
+            DietLog dietLog = new DietLog();
+            dietLog.setUserId(userId);
+            dietLog.setDate(intake.getDate());
+            dietLog.setCustomName("Coconut Water (" + intake.getAmountMl() + "ml)");
+            dietLog.setMealType("Miscellaneous");
+            dietLog.setCalories((int) Math.round(19 * factor));
+            dietLog.setProteinG(Math.round(0.7 * factor * 10.0) / 10.0);
+            dietLog.setCarbsG(Math.round(3.7 * factor * 10.0) / 10.0);
+            dietLog.setFatG(Math.round(0.2 * factor * 10.0) / 10.0);
+            dietLog.setServings(1.0);
+            dietLogRepository.save(dietLog);
+        }
+
+        return saved;
     }
 
     @DeleteMapping("/{id}")
-    public void delete(@PathVariable Long id) {
+    public void delete(@PathVariable Long id, HttpServletRequest request) {
+        String userId = (String) request.getAttribute("userId");
+        WaterIntake intake = repository.findById(id).orElse(null);
+        if (intake != null && "Coconut Water".equals(intake.getType())) {
+            String name = "Coconut Water (" + intake.getAmountMl() + "ml)";
+            List<DietLog> linked = dietLogRepository.findByUserIdAndCustomNameContaining(userId, name);
+            if (!linked.isEmpty()) {
+                dietLogRepository.deleteById(linked.get(0).getId());
+            }
+        }
         repository.deleteById(id);
     }
 
