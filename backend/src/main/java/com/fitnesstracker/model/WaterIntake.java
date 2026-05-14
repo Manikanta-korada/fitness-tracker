@@ -16,6 +16,10 @@ public class WaterIntake {
     private LocalDate date;
     private String type;
     private int amountMl;
+    private int calories;
+    private double proteinG;
+    private double carbsG;
+    private double fatG;
 
     public WaterIntake() {}
 
@@ -29,4 +33,12 @@ public class WaterIntake {
     public void setType(String type) { this.type = type; }
     public int getAmountMl() { return amountMl; }
     public void setAmountMl(int amountMl) { this.amountMl = amountMl; }
+    public int getCalories() { return calories; }
+    public void setCalories(int calories) { this.calories = calories; }
+    public double getProteinG() { return proteinG; }
+    public void setProteinG(double proteinG) { this.proteinG = proteinG; }
+    public double getCarbsG() { return carbsG; }
+    public void setCarbsG(double carbsG) { this.carbsG = carbsG; }
+    public double getFatG() { return fatG; }
+    public void setFatG(double fatG) { this.fatG = fatG; }
 }
