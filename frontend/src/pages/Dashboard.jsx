@@ -16,17 +16,17 @@ export default function Dashboard() {
   const today = new Date().toISOString().split('T')[0];
 
   useEffect(() => {
-    dietApi.getByDate(today).then(setDietLogs);
-    workoutsApi.getAll(today, today).then(setWorkouts);
-    targetsApi.get().then(setTargets);
-    waterApi.getByDate(today).then(setWaterLogs);
-    sleepApi.getByDate(today).then(setSleepLogs);
+    dietApi.getByDate(today).then(setDietLogs).catch(() => {});
+    workoutsApi.getAll(today, today).then(setWorkouts).catch(() => {});
+    targetsApi.get().then(setTargets).catch(() => {});
+    waterApi.getByDate(today).then(setWaterLogs).catch(() => {});
+    sleepApi.getByDate(today).then(setSleepLogs).catch(() => {});
     progressApi.getMealRecommendations().then(setMealRecs).catch(() => {});
     progressApi.getMuscleGroupRecommendation().then(setMuscleRec).catch(() => {});
     progressApi.getWeeklyStreak().then(setWeeklyStreak).catch(() => {});
     healthNotesApi.getByDate(today).then(setHealthNotes).catch(() => {});
     const weekFrom = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-    waterApi.getTrend(weekFrom, today).then(setWaterWeekly);
+    waterApi.getTrend(weekFrom, today).then(setWaterWeekly).catch(() => {});
   }, []);
 
   const totalCalories = dietLogs.reduce((sum, l) => sum + l.calories, 0);

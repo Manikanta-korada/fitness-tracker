@@ -39,18 +39,18 @@ export default function DietLog() {
   }, [calendarMonth]);
 
   async function loadData() {
-    const [l, m, t, w, s] = await Promise.all([
+    const [l, m, t, w, s] = await Promise.allSettled([
       dietApi.getByDate(selectedDate),
       mealsApi.getAll(),
       targetsApi.get(),
       waterApi.getByDate(selectedDate),
       sleepApi.getByDate(selectedDate),
     ]);
-    setLogs(l);
-    setMeals(m);
-    setTargets(t);
-    setWaterLogs(w);
-    setSleepLogs(s);
+    setLogs(l.status === 'fulfilled' ? l.value : []);
+    setMeals(m.status === 'fulfilled' ? m.value : []);
+    setTargets(t.status === 'fulfilled' ? t.value : null);
+    setWaterLogs(w.status === 'fulfilled' ? w.value : []);
+    setSleepLogs(s.status === 'fulfilled' ? s.value : []);
     dietApi.getRecent().then(setRecentMeals).catch(() => {});
     healthNotesApi.getByDate(selectedDate).then(setHealthNotes).catch(() => {});
   }
