@@ -67,36 +67,40 @@ export default function Login() {
 
         <form onSubmit={handleSubmit} className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
           {error && (
-            <div className="bg-red-50 text-red-600 text-sm rounded-lg px-3 py-2 mb-4">{error}</div>
+            <div role="alert" className="bg-red-50 text-red-600 text-sm rounded-lg px-3 py-2 mb-4">{error}</div>
           )}
           {message && (
-            <div className="bg-green-50 text-green-600 text-sm rounded-lg px-3 py-2 mb-4">{message}</div>
+            <div role="status" className="bg-green-50 text-green-600 text-sm rounded-lg px-3 py-2 mb-4">{message}</div>
           )}
 
           <div className="mb-4">
-            <label className="block text-sm text-gray-700 mb-1">Email</label>
+            <label htmlFor="login-email" className="block text-sm text-gray-700 mb-1">Email</label>
             <input
+              id="login-email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
               required
             />
           </div>
 
           <div className={isSignUp ? 'mb-3' : 'mb-6'}>
-            <label className="block text-sm text-gray-700 mb-1">Password</label>
+            <label htmlFor="login-password" className="block text-sm text-gray-700 mb-1">Password</label>
             <input
+              id="login-password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              autoComplete={isSignUp ? 'new-password' : 'current-password'}
               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
               required
             />
             {isSignUp && password && passwordErrors.length > 0 && (
-              <ul className="mt-2 space-y-0.5">
+              <ul className="mt-2 space-y-0.5" aria-live="polite">
                 {passwordErrors.map((err) => (
-                  <li key={err} className="text-xs text-red-500">• {err}</li>
+                  <li key={err} className="text-xs text-red-500">&bull; {err}</li>
                 ))}
               </ul>
             )}
@@ -107,11 +111,13 @@ export default function Login() {
 
           {isSignUp && (
             <div className="mb-6">
-              <label className="block text-sm text-gray-700 mb-1">Confirm Password</label>
+              <label htmlFor="login-confirm-password" className="block text-sm text-gray-700 mb-1">Confirm Password</label>
               <input
+                id="login-confirm-password"
                 type="password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
+                autoComplete="new-password"
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
                 required
               />

@@ -88,6 +88,7 @@ export default function ExerciseLibrary() {
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         placeholder="Search exercises..."
+        aria-label="Search exercises"
         className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm mb-6"
       />
 
@@ -102,7 +103,7 @@ export default function ExerciseLibrary() {
                   <span className="inline-block mt-1 text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded">{ex.muscleGroup}</span>
                 </div>
                 {ex.custom ? (
-                  <button onClick={() => handleDelete(ex.id)} className="text-red-400 text-xs hover:text-red-600">Delete</button>
+                  <button onClick={() => handleDelete(ex.id)} aria-label={`Delete ${ex.name}`} className="text-red-400 text-xs hover:text-red-600">Delete</button>
                 ) : (
                   <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded">Pre-built</span>
                 )}

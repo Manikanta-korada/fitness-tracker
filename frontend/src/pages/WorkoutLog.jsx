@@ -55,8 +55,9 @@ export default function WorkoutLog() {
   }
 
   function addEntry() {
+    if (!exercises.length) return;
     setEntries([...entries, {
-      exercise: { id: exercises[0]?.id },
+      exercise: { id: exercises[0].id },
       sets: [{ setNumber: 1, reps: 10, weightKg: 0, durationMinutes: null, distanceKm: null }],
     }]);
   }
@@ -94,8 +95,16 @@ export default function WorkoutLog() {
   }
 
   function updateSet(entryIndex, setIndex, field, value) {
+    if (value === '' || value === null) {
+      const updated = [...entries];
+      updated[entryIndex].sets[setIndex][field] = field === 'reps' ? 0 : null;
+      setEntries(updated);
+      return;
+    }
+    const parsed = parseFloat(value);
+    if (isNaN(parsed)) return;
     const updated = [...entries];
-    updated[entryIndex].sets[setIndex][field] = parseFloat(value);
+    updated[entryIndex].sets[setIndex][field] = parsed;
     setEntries(updated);
   }
 
@@ -207,8 +216,16 @@ export default function WorkoutLog() {
   }
 
   function updateTemplateSet(entryIndex, setIndex, field, value) {
+    if (value === '' || value === null) {
+      const updated = [...templateEntries];
+      updated[entryIndex].sets[setIndex][field] = field === 'reps' ? 0 : null;
+      setTemplateEntries(updated);
+      return;
+    }
+    const parsed = parseFloat(value);
+    if (isNaN(parsed)) return;
     const updated = [...templateEntries];
-    updated[entryIndex].sets[setIndex][field] = parseFloat(value);
+    updated[entryIndex].sets[setIndex][field] = parsed;
     setTemplateEntries(updated);
   }
 
@@ -242,14 +259,18 @@ export default function WorkoutLog() {
     <div>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <h1 className="text-xl md:text-2xl font-bold text-gray-900">Log Workout</h1>
-        <div className="flex gap-2">
+        <div className="flex gap-2" role="tablist" aria-label="Workout sections">
           <button
+            role="tab"
+            aria-selected={activeTab === 'log'}
             onClick={() => setActiveTab('log')}
             className={`px-3 py-1.5 rounded-lg text-sm font-medium ${activeTab === 'log' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
           >
             Log Workout
           </button>
           <button
+            role="tab"
+            aria-selected={activeTab === 'templates'}
             onClick={() => setActiveTab('templates')}
             className={`px-3 py-1.5 rounded-lg text-sm font-medium ${activeTab === 'templates' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
           >
@@ -314,7 +335,7 @@ export default function WorkoutLog() {
                       {entry.sets.map((set, setIdx) => (
                         <div key={setIdx} className="flex gap-2 items-center mb-1 ml-2">
                           <span className="w-10 text-sm text-gray-500">{set.setNumber}</span>
-                          <input type="number" value={set.reps} onChange={(e) => updateTemplateSet(entryIdx, setIdx, 'reps', e.target.value)} className="w-16 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center" min="0" />
+                          <input type="number" value={set.reps} onChange={(e) => updateTemplateSet(entryIdx, setIdx, 'reps', e.target.value)} className="w-16 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center" min="0" step="1" />
                           <input type="number" value={set.weightKg} onChange={(e) => updateTemplateSet(entryIdx, setIdx, 'weightKg', e.target.value)} className="w-20 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center" step="0.5" />
                           <input type="number" value={set.durationMinutes || ''} onChange={(e) => updateTemplateSet(entryIdx, setIdx, 'durationMinutes', e.target.value || null)} className="w-20 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center" placeholder="-" min="0" step="0.01" />
                           <input type="number" value={set.distanceKm || ''} onChange={(e) => updateTemplateSet(entryIdx, setIdx, 'distanceKm', e.target.value || null)} className="w-20 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center" placeholder="-" step="0.1" min="0" />
@@ -471,6 +492,7 @@ export default function WorkoutLog() {
                         onChange={(e) => updateSet(entryIdx, setIdx, 'reps', e.target.value)}
                         className="w-16 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center"
                         min="0"
+                        step="1"
                       />
                       <input
                         type="number"
@@ -546,11 +568,11 @@ export default function WorkoutLog() {
         return (
           <div className="bg-white rounded-xl p-3 border border-gray-100 shadow-sm mb-4 max-w-md">
             <div className="flex items-center justify-between mb-2">
-              <button onClick={() => setCalendarMonth(new Date(year, month - 1, 1))} className="px-2 py-0.5 bg-gray-100 rounded text-xs hover:bg-gray-200">&larr;</button>
+              <button onClick={() => setCalendarMonth(new Date(year, month - 1, 1))} aria-label="Previous month" className="px-2 py-0.5 bg-gray-100 rounded text-xs hover:bg-gray-200">&larr;</button>
               <h3 className="text-xs font-semibold text-gray-700">
                 {calendarMonth.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
               </h3>
-              <button onClick={() => setCalendarMonth(new Date(year, month + 1, 1))} className="px-2 py-0.5 bg-gray-100 rounded text-xs hover:bg-gray-200">&rarr;</button>
+              <button onClick={() => setCalendarMonth(new Date(year, month + 1, 1))} aria-label="Next month" className="px-2 py-0.5 bg-gray-100 rounded text-xs hover:bg-gray-200">&rarr;</button>
             </div>
 
             <div className="grid grid-cols-7 gap-0.5 mb-1">
@@ -612,11 +634,15 @@ export default function WorkoutLog() {
         {sessions.map((session) => (
           <div key={session.id} className="bg-white rounded-xl border border-gray-100 shadow-sm">
             <div
+              role="button"
+              tabIndex={0}
+              aria-expanded={expandedSession === session.id}
               className="flex justify-between items-center p-4 cursor-pointer"
               onClick={() => setExpandedSession(expandedSession === session.id ? null : session.id)}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setExpandedSession(expandedSession === session.id ? null : session.id); }}}
             >
               <div className="flex items-center gap-3">
-                <span className="text-gray-400 text-xs">{expandedSession === session.id ? '▼' : '▶'}</span>
+                <span className="text-gray-400 text-xs" aria-hidden="true">{expandedSession === session.id ? '▼' : '▶'}</span>
                 <div>
                   <h3 className="font-semibold text-gray-900">{session.name}</h3>
                   <p className="text-xs text-gray-400">{session.entries?.length || 0} exercises</p>

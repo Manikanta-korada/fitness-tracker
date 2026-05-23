@@ -58,7 +58,7 @@ export default function Progress() {
   }
 
   function CardSpinner() {
-    return <div className="flex items-center justify-center py-8"><div className="w-6 h-6 border-3 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div></div>;
+    return <div className="flex items-center justify-center py-8" role="status" aria-label="Loading"><div className="w-6 h-6 border-3 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div></div>;
   }
 
   function handleExportPDF() {
@@ -75,9 +75,11 @@ export default function Progress() {
 
   async function handleLogWeight(e) {
     e.preventDefault();
+    const weight = parseFloat(newWeight);
+    if (isNaN(weight) || weight <= 0 || weight > 500) return;
     setLoggingWeight(true);
     try {
-      await progressApi.logWeight({ weightKg: parseFloat(newWeight) });
+      await progressApi.logWeight({ weightKg: weight });
       setNewWeight('');
       setWeightData(await progressApi.getWeight());
     } finally {
@@ -87,13 +89,18 @@ export default function Progress() {
 
   async function handleSaveTargets(e) {
     e.preventDefault();
+    const cal = parseInt(targetCalories);
+    const prot = parseFloat(targetProtein);
+    const carbs = parseFloat(targetCarbs);
+    const fat = parseFloat(targetFat);
+    if ([cal, prot, carbs, fat].some(v => isNaN(v) || v < 0)) return;
     setSavingTargets(true);
     try {
       await targetsApi.update({
-        calorieTarget: parseInt(targetCalories),
-        proteinTargetG: parseFloat(targetProtein),
-        carbsTargetG: parseFloat(targetCarbs),
-        fatTargetG: parseFloat(targetFat),
+        calorieTarget: cal,
+        proteinTargetG: prot,
+        carbsTargetG: carbs,
+        fatTargetG: fat,
       });
       setShowTargetForm(false);
       setTargets(await targetsApi.get());
@@ -128,19 +135,19 @@ export default function Progress() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <div>
               <label className="text-xs text-gray-500">Calories</label>
-              <input type="number" value={targetCalories} onChange={(e) => setTargetCalories(e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+              <input type="number" value={targetCalories} onChange={(e) => setTargetCalories(e.target.value)} min="0" step="1" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
             </div>
             <div>
               <label className="text-xs text-gray-500">Protein (g)</label>
-              <input type="number" value={targetProtein} onChange={(e) => setTargetProtein(e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" step="0.1" />
+              <input type="number" value={targetProtein} onChange={(e) => setTargetProtein(e.target.value)} min="0" step="0.1" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
             </div>
             <div>
               <label className="text-xs text-gray-500">Carbs (g)</label>
-              <input type="number" value={targetCarbs} onChange={(e) => setTargetCarbs(e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" step="0.1" />
+              <input type="number" value={targetCarbs} onChange={(e) => setTargetCarbs(e.target.value)} min="0" step="0.1" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
             </div>
             <div>
               <label className="text-xs text-gray-500">Fat (g)</label>
-              <input type="number" value={targetFat} onChange={(e) => setTargetFat(e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" step="0.1" />
+              <input type="number" value={targetFat} onChange={(e) => setTargetFat(e.target.value)} min="0" step="0.1" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
             </div>
           </div>
           <button
@@ -164,6 +171,9 @@ export default function Progress() {
               onChange={(e) => setNewWeight(e.target.value)}
               placeholder="Weight (kg)"
               step="0.1"
+              min="0.1"
+              max="500"
+              aria-label="Body weight in kg"
               className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm flex-1"
               required
             />
@@ -348,6 +358,7 @@ export default function Progress() {
           <select
             value={selectedExercise}
             onChange={(e) => loadExerciseProgress(e.target.value)}
+            aria-label="Select exercise to view progress"
             className="border border-gray-200 rounded-lg px-3 py-2 text-sm mb-4 w-full sm:w-auto"
           >
             <option value="">Select an exercise...</option>

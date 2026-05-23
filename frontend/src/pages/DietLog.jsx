@@ -113,13 +113,25 @@ export default function DietLog() {
 
   async function handleAddMeal(e) {
     e.preventDefault();
+    if (customMode) {
+      const cal = parseInt(customCalories);
+      const prot = parseFloat(customProtein);
+      const carb = parseFloat(customCarbs);
+      const fat = parseFloat(customFat);
+      if (!customName.trim() || isNaN(cal) || isNaN(prot) || isNaN(carb) || isNaN(fat)) return;
+      if (cal < 0 || prot < 0 || carb < 0 || fat < 0) return;
+    } else {
+      if (!selectedMealId) return;
+      const srv = parseFloat(servings);
+      if (isNaN(srv) || srv <= 0) return;
+    }
     setSubmitting(true);
     try {
       if (customMode) {
         await dietApi.create({
           date: selectedDate,
           mealType,
-          customName,
+          customName: customName.trim(),
           calories: parseInt(customCalories),
           proteinG: parseFloat(customProtein),
           carbsG: parseFloat(customCarbs),
@@ -159,12 +171,14 @@ export default function DietLog() {
 
   async function handleAddWater(e) {
     e.preventDefault();
+    const amount = parseInt(waterAmount);
+    if (isNaN(amount) || amount < 1 || amount > 5000) return;
     setWaterSubmitting(true);
     try {
       await waterApi.create({
         date: selectedDate,
         type: waterType,
-        amountMl: parseInt(waterAmount),
+        amountMl: amount,
       });
       setWaterAmount('');
       loadData();
@@ -252,11 +266,11 @@ export default function DietLog() {
         return (
           <div className="bg-white rounded-xl p-3 border border-gray-100 shadow-sm mb-4 max-w-md">
             <div className="flex items-center justify-between mb-2">
-              <button onClick={() => setCalendarMonth(new Date(year, month - 1, 1))} className="px-2 py-0.5 bg-gray-100 rounded text-xs hover:bg-gray-200">&larr;</button>
+              <button onClick={() => setCalendarMonth(new Date(year, month - 1, 1))} aria-label="Previous month" className="px-2 py-0.5 bg-gray-100 rounded text-xs hover:bg-gray-200">&larr;</button>
               <h3 className="text-xs font-semibold text-gray-700">
                 {calendarMonth.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
               </h3>
-              <button onClick={() => setCalendarMonth(new Date(year, month + 1, 1))} className="px-2 py-0.5 bg-gray-100 rounded text-xs hover:bg-gray-200">&rarr;</button>
+              <button onClick={() => setCalendarMonth(new Date(year, month + 1, 1))} aria-label="Next month" className="px-2 py-0.5 bg-gray-100 rounded text-xs hover:bg-gray-200">&rarr;</button>
             </div>
 
             <div className="grid grid-cols-7 gap-0.5 mb-1">
@@ -346,9 +360,11 @@ export default function DietLog() {
       )}
 
       <form onSubmit={handleAddMeal} className="bg-white rounded-xl p-4 md:p-6 border border-gray-100 shadow-sm mb-6">
-        <div className="flex gap-3 mb-4 items-center">
+        <div className="flex gap-3 mb-4 items-center" role="tablist" aria-label="Meal entry mode">
           <button
             type="button"
+            role="tab"
+            aria-selected={!customMode}
             onClick={() => setCustomMode(false)}
             className={`text-sm px-3 py-1 rounded-lg ${!customMode ? 'bg-indigo-100 text-indigo-700' : 'text-gray-500'}`}
           >
@@ -356,6 +372,8 @@ export default function DietLog() {
           </button>
           <button
             type="button"
+            role="tab"
+            aria-selected={customMode}
             onClick={() => setCustomMode(true)}
             className={`text-sm px-3 py-1 rounded-lg ${customMode ? 'bg-indigo-100 text-indigo-700' : 'text-gray-500'}`}
           >
@@ -364,8 +382,8 @@ export default function DietLog() {
         </div>
 
         <div className="mb-4">
-          <label className="block text-xs text-gray-500 mb-1">Meal Type</label>
-          <div className="flex flex-wrap gap-2">
+          <label className="block text-xs text-gray-500 mb-1" id="meal-type-label">Meal Type</label>
+          <div className="flex flex-wrap gap-2" role="group" aria-labelledby="meal-type-label">
             {MEAL_TYPES.map((type) => (
               <button
                 key={type}
@@ -433,19 +451,19 @@ export default function DietLog() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
               <div>
                 <label className="block text-xs text-gray-500 mb-1">Calories (kcal)</label>
-                <input type="number" value={customCalories} onChange={(e) => setCustomCalories(e.target.value)} placeholder="0" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" required />
+                <input type="number" value={customCalories} onChange={(e) => setCustomCalories(e.target.value)} placeholder="0" min="0" step="1" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" required />
               </div>
               <div>
                 <label className="block text-xs text-gray-500 mb-1">Protein (g)</label>
-                <input type="number" value={customProtein} onChange={(e) => setCustomProtein(e.target.value)} placeholder="0" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" step="0.1" required />
+                <input type="number" value={customProtein} onChange={(e) => setCustomProtein(e.target.value)} placeholder="0" min="0" step="0.1" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" required />
               </div>
               <div>
                 <label className="block text-xs text-gray-500 mb-1">Carbs (g)</label>
-                <input type="number" value={customCarbs} onChange={(e) => setCustomCarbs(e.target.value)} placeholder="0" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" step="0.1" required />
+                <input type="number" value={customCarbs} onChange={(e) => setCustomCarbs(e.target.value)} placeholder="0" min="0" step="0.1" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" required />
               </div>
               <div>
                 <label className="block text-xs text-gray-500 mb-1">Fat (g)</label>
-                <input type="number" value={customFat} onChange={(e) => setCustomFat(e.target.value)} placeholder="0" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" step="0.1" required />
+                <input type="number" value={customFat} onChange={(e) => setCustomFat(e.target.value)} placeholder="0" min="0" step="0.1" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" required />
               </div>
             </div>
             <button
@@ -521,8 +539,9 @@ export default function DietLog() {
           {sleepLogs.length === 0 ? (
             <form onSubmit={handleAddSleep} className="flex flex-col sm:flex-row gap-3 sm:items-end">
               <div>
-                <label className="block text-xs text-gray-500 mb-1">Bedtime</label>
+                <label htmlFor="bedtime-input" className="block text-xs text-gray-500 mb-1">Bedtime</label>
                 <input
+                  id="bedtime-input"
                   type="time"
                   value={bedtime}
                   onChange={(e) => setBedtime(e.target.value)}
@@ -531,8 +550,9 @@ export default function DietLog() {
                 />
               </div>
               <div>
-                <label className="block text-xs text-gray-500 mb-1">Wake Time</label>
+                <label htmlFor="waketime-input" className="block text-xs text-gray-500 mb-1">Wake Time</label>
                 <input
+                  id="waketime-input"
                   type="time"
                   value={wakeTime}
                   onChange={(e) => setWakeTime(e.target.value)}
@@ -590,6 +610,8 @@ export default function DietLog() {
                 onChange={(e) => setWaterAmount(e.target.value)}
                 placeholder="250"
                 min="1"
+                max="5000"
+                step="1"
                 className="w-24 border border-gray-200 rounded-lg px-3 py-2 text-sm"
                 required
               />

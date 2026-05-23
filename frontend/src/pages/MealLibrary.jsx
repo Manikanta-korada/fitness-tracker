@@ -21,12 +21,17 @@ export default function MealLibrary() {
 
   async function handleSubmit(e) {
     e.preventDefault();
+    const cal = parseInt(calories);
+    const prot = parseFloat(protein);
+    const c = parseFloat(carbs);
+    const f = parseFloat(fat);
+    if (!name.trim() || [cal, prot, c, f].some(v => isNaN(v) || v < 0)) return;
     await mealsApi.create({
-      name,
-      calories: parseInt(calories),
-      proteinG: parseFloat(protein),
-      carbsG: parseFloat(carbs),
-      fatG: parseFloat(fat),
+      name: name.trim(),
+      calories: cal,
+      proteinG: prot,
+      carbsG: c,
+      fatG: f,
     });
     setShowForm(false);
     setName('');
@@ -57,22 +62,22 @@ export default function MealLibrary() {
       {showForm && (
         <form onSubmit={handleSubmit} className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm mb-6">
           <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Meal name" className="w-full border border-gray-200 rounded-lg px-3 py-2 mb-3 text-sm" required />
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <div>
               <label className="block text-xs text-gray-500 mb-1">Calories (kcal)</label>
-              <input type="number" value={calories} onChange={(e) => setCalories(e.target.value)} placeholder="0" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" required />
+              <input type="number" value={calories} onChange={(e) => setCalories(e.target.value)} placeholder="0" min="0" step="1" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" required />
             </div>
             <div>
               <label className="block text-xs text-gray-500 mb-1">Protein (g)</label>
-              <input type="number" value={protein} onChange={(e) => setProtein(e.target.value)} placeholder="0" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" step="0.1" required />
+              <input type="number" value={protein} onChange={(e) => setProtein(e.target.value)} placeholder="0" min="0" step="0.1" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" required />
             </div>
             <div>
               <label className="block text-xs text-gray-500 mb-1">Carbs (g)</label>
-              <input type="number" value={carbs} onChange={(e) => setCarbs(e.target.value)} placeholder="0" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" step="0.1" required />
+              <input type="number" value={carbs} onChange={(e) => setCarbs(e.target.value)} placeholder="0" min="0" step="0.1" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" required />
             </div>
             <div>
               <label className="block text-xs text-gray-500 mb-1">Fat (g)</label>
-              <input type="number" value={fat} onChange={(e) => setFat(e.target.value)} placeholder="0" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" step="0.1" required />
+              <input type="number" value={fat} onChange={(e) => setFat(e.target.value)} placeholder="0" min="0" step="0.1" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" required />
             </div>
           </div>
           <button type="submit" className="mt-4 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700">Save Meal</button>
@@ -84,6 +89,7 @@ export default function MealLibrary() {
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         placeholder="Search meals..."
+        aria-label="Search meals"
         className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm mb-6"
       />
 
@@ -93,7 +99,7 @@ export default function MealLibrary() {
             <div className="flex justify-between items-start mb-2">
               <h3 className="font-semibold text-gray-900 text-sm">{meal.name}</h3>
               {meal.custom && (
-                <button onClick={() => handleDelete(meal.id)} className="text-red-400 text-xs hover:text-red-600">Delete</button>
+                <button onClick={() => handleDelete(meal.id)} aria-label={`Delete ${meal.name}`} className="text-red-400 text-xs hover:text-red-600">Delete</button>
               )}
             </div>
             <p className="text-lg font-bold text-orange-600">{meal.calories} <span className="text-xs font-normal">kcal</span></p>
