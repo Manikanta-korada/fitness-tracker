@@ -23,6 +23,7 @@ export default function WorkoutLog() {
   const [saving, setSaving] = useState(false);
   const [savingTemplate, setSavingTemplate] = useState(false);
   const [applyingTemplate, setApplyingTemplate] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
 
   const workoutDates = new Set(monthSessions.map(s => s.date));
   const sessions = monthSessions.filter(s => s.date === viewDate);
@@ -154,8 +155,13 @@ export default function WorkoutLog() {
   }
 
   async function handleDelete(id) {
-    await workoutsApi.delete(id);
-    loadData();
+    setDeletingId(id);
+    try {
+      await workoutsApi.delete(id);
+      loadData();
+    } finally {
+      setDeletingId(null);
+    }
   }
 
   async function handleRepeatPrevious() {
@@ -221,8 +227,13 @@ export default function WorkoutLog() {
   }
 
   async function handleDeleteTemplate(id) {
-    await templatesApi.delete(id);
-    loadData();
+    setDeletingId(id);
+    try {
+      await templatesApi.delete(id);
+      loadData();
+    } finally {
+      setDeletingId(null);
+    }
   }
 
   if (loading) return <Spinner />;
@@ -341,7 +352,7 @@ export default function WorkoutLog() {
                     >
                       {applyingTemplate === template.id ? 'Applying...' : 'Apply'}
                     </button>
-                    <button onClick={() => handleDeleteTemplate(template.id)} className="text-red-400 text-xs hover:text-red-600">Delete</button>
+                    <button onClick={() => handleDeleteTemplate(template.id)} disabled={deletingId === template.id} className="text-red-400 text-xs hover:text-red-600 disabled:opacity-50">{deletingId === template.id ? 'Deleting...' : 'Delete'}</button>
                   </div>
                 </div>
                 {template.entries && template.entries.length > 0 && (
@@ -613,7 +624,7 @@ export default function WorkoutLog() {
               </div>
               <div className="flex gap-3">
                 <button onClick={(e) => { e.stopPropagation(); startEdit(session); }} className="text-indigo-500 text-xs hover:text-indigo-700">Edit</button>
-                <button onClick={(e) => { e.stopPropagation(); handleDelete(session.id); }} className="text-red-400 text-xs hover:text-red-600">Delete</button>
+                <button onClick={(e) => { e.stopPropagation(); handleDelete(session.id); }} disabled={deletingId === session.id} className="text-red-400 text-xs hover:text-red-600 disabled:opacity-50">{deletingId === session.id ? 'Deleting...' : 'Delete'}</button>
               </div>
             </div>
             {expandedSession === session.id && session.entries && session.entries.length > 0 && (

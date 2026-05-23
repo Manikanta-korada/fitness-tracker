@@ -37,6 +37,7 @@ export default function DietLog() {
   const [noteSubmitting, setNoteSubmitting] = useState(false);
   const [copyingYesterday, setCopyingYesterday] = useState(false);
   const [quickAddingIdx, setQuickAddingIdx] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
 
   useEffect(() => {
     loadData();
@@ -90,8 +91,13 @@ export default function DietLog() {
   }
 
   async function handleDeleteNote(id) {
-    await healthNotesApi.delete(id);
-    loadData();
+    setDeletingId(id);
+    try {
+      await healthNotesApi.delete(id);
+      loadData();
+    } finally {
+      setDeletingId(null);
+    }
   }
 
   async function handleCopyYesterday() {
@@ -142,8 +148,13 @@ export default function DietLog() {
   }
 
   async function handleDelete(id) {
-    await dietApi.delete(id);
-    loadData();
+    setDeletingId(id);
+    try {
+      await dietApi.delete(id);
+      loadData();
+    } finally {
+      setDeletingId(null);
+    }
   }
 
   async function handleAddWater(e) {
@@ -163,8 +174,13 @@ export default function DietLog() {
   }
 
   async function handleDeleteWater(id) {
-    await waterApi.delete(id);
-    loadData();
+    setDeletingId(id);
+    try {
+      await waterApi.delete(id);
+      loadData();
+    } finally {
+      setDeletingId(null);
+    }
   }
 
   async function handleAddSleep(e) {
@@ -179,8 +195,13 @@ export default function DietLog() {
   }
 
   async function handleDeleteSleep(id) {
-    await sleepApi.delete(id);
-    loadData();
+    setDeletingId(id);
+    try {
+      await sleepApi.delete(id);
+      loadData();
+    } finally {
+      setDeletingId(null);
+    }
   }
 
   function formatDuration(minutes) {
@@ -458,7 +479,7 @@ export default function DietLog() {
                           {log.calories} kcal | P: {log.proteinG}g | C: {log.carbsG}g | F: {log.fatG}g
                         </p>
                       </div>
-                      <button onClick={() => handleDelete(log.id)} className="text-red-400 text-xs hover:text-red-600">Remove</button>
+                      <button onClick={() => handleDelete(log.id)} disabled={deletingId === log.id} className="text-red-400 text-xs hover:text-red-600 disabled:opacity-50">{deletingId === log.id ? 'Removing...' : 'Remove'}</button>
                     </li>
                   ))}
                 </ul>
@@ -482,7 +503,7 @@ export default function DietLog() {
                           {log.calories} kcal | P: {log.proteinG}g | C: {log.carbsG}g | F: {log.fatG}g
                         </p>
                       </div>
-                      <button onClick={() => handleDelete(log.id)} className="text-red-400 text-xs hover:text-red-600">Remove</button>
+                      <button onClick={() => handleDelete(log.id)} disabled={deletingId === log.id} className="text-red-400 text-xs hover:text-red-600 disabled:opacity-50">{deletingId === log.id ? 'Removing...' : 'Remove'}</button>
                     </li>
                   ))}
                 </ul>
@@ -535,7 +556,7 @@ export default function DietLog() {
                     <p className="text-lg font-bold text-purple-700">{formatDuration(s.durationMinutes)}</p>
                     <p className="text-xs text-purple-500">Bed: {s.bedtime} &rarr; Wake: {s.wakeTime}</p>
                   </div>
-                  <button onClick={() => handleDeleteSleep(s.id)} className="text-red-400 text-xs hover:text-red-600">Remove</button>
+                  <button onClick={() => handleDeleteSleep(s.id)} disabled={deletingId === s.id} className="text-red-400 text-xs hover:text-red-600 disabled:opacity-50">{deletingId === s.id ? 'Removing...' : 'Remove'}</button>
                 </div>
               ))}
             </div>
@@ -608,7 +629,7 @@ export default function DietLog() {
               {waterLogs.map((w) => (
                 <li key={w.id} className="flex justify-between items-center text-sm">
                   <span className="text-gray-600">{w.type} &mdash; {w.amountMl} ml</span>
-                  <button onClick={() => handleDeleteWater(w.id)} className="text-red-400 text-xs hover:text-red-600">Remove</button>
+                  <button onClick={() => handleDeleteWater(w.id)} disabled={deletingId === w.id} className="text-red-400 text-xs hover:text-red-600 disabled:opacity-50">{deletingId === w.id ? 'Removing...' : 'Remove'}</button>
                 </li>
               ))}
             </ul>
@@ -669,7 +690,7 @@ export default function DietLog() {
                       n.severity === 'serious' ? 'text-red-500' : n.severity === 'warning' ? 'text-yellow-500' : 'text-blue-500'
                     }`}>{n.severity}</span>
                   </div>
-                  <button onClick={() => handleDeleteNote(n.id)} className="text-red-400 text-xs hover:text-red-600">Remove</button>
+                  <button onClick={() => handleDeleteNote(n.id)} disabled={deletingId === n.id} className="text-red-400 text-xs hover:text-red-600 disabled:opacity-50">{deletingId === n.id ? 'Removing...' : 'Remove'}</button>
                 </li>
               ))}
             </ul>
