@@ -31,6 +31,12 @@ export default function DietLog() {
   const [calendarMonth, setCalendarMonth] = useState(new Date());
   const [monthCalories, setMonthCalories] = useState({});
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [waterSubmitting, setWaterSubmitting] = useState(false);
+  const [sleepSubmitting, setSleepSubmitting] = useState(false);
+  const [noteSubmitting, setNoteSubmitting] = useState(false);
+  const [copyingYesterday, setCopyingYesterday] = useState(false);
+  const [quickAddingIdx, setQuickAddingIdx] = useState(null);
 
   useEffect(() => {
     loadData();
@@ -72,10 +78,15 @@ export default function DietLog() {
 
   async function handleAddNote(e) {
     e.preventDefault();
-    await healthNotesApi.create({ date: selectedDate, note: noteText, severity: noteSeverity });
-    setNoteText('');
-    setNoteSeverity('info');
-    loadData();
+    setNoteSubmitting(true);
+    try {
+      await healthNotesApi.create({ date: selectedDate, note: noteText, severity: noteSeverity });
+      setNoteText('');
+      setNoteSeverity('info');
+      loadData();
+    } finally {
+      setNoteSubmitting(false);
+    }
   }
 
   async function handleDeleteNote(id) {
@@ -84,38 +95,50 @@ export default function DietLog() {
   }
 
   async function handleCopyYesterday() {
-    const yesterday = new Date(new Date(selectedDate).getTime() - 86400000).toISOString().split('T')[0];
-    await dietApi.copyDay(yesterday, selectedDate);
-    loadData();
+    setCopyingYesterday(true);
+    try {
+      const yesterday = new Date(new Date(selectedDate).getTime() - 86400000).toISOString().split('T')[0];
+      await dietApi.copyDay(yesterday, selectedDate);
+      loadData();
+    } finally {
+      setCopyingYesterday(false);
+    }
   }
 
   async function handleAddMeal(e) {
     e.preventDefault();
-    if (customMode) {
-      await dietApi.create({
-        date: selectedDate,
-        mealType,
-        customName,
-        calories: parseInt(customCalories),
-        proteinG: parseFloat(customProtein),
-        carbsG: parseFloat(customCarbs),
-        fatG: parseFloat(customFat),
-        servings: 1,
-      });
-      setCustomName('');
-      setCustomCalories('');
-      setCustomProtein('');
-      setCustomCarbs('');
-      setCustomFat('');
-    } else {
-      await dietApi.create({
-        date: selectedDate,
-        mealType,
-        meal: { id: parseInt(selectedMealId) },
-        servings: parseFloat(servings),
-      });
+    setSubmitting(true);
+    try {
+      if (customMode) {
+        await dietApi.create({
+          date: selectedDate,
+          mealType,
+          customName,
+          calories: parseInt(customCalories),
+          proteinG: parseFloat(customProtein),
+          carbsG: parseFloat(customCarbs),
+          fatG: parseFloat(customFat),
+          servings: 1,
+        });
+        setCustomName('');
+        setCustomCalories('');
+        setCustomProtein('');
+        setCustomCarbs('');
+        setCustomFat('');
+      } else {
+        await dietApi.create({
+          date: selectedDate,
+          mealType,
+          meal: { id: parseInt(selectedMealId) },
+          servings: parseFloat(servings),
+        });
+        setSelectedMealId('');
+        setServings(1);
+      }
+      loadData();
+    } finally {
+      setSubmitting(false);
     }
-    loadData();
   }
 
   async function handleDelete(id) {
@@ -125,13 +148,18 @@ export default function DietLog() {
 
   async function handleAddWater(e) {
     e.preventDefault();
-    await waterApi.create({
-      date: selectedDate,
-      type: waterType,
-      amountMl: parseInt(waterAmount),
-    });
-    setWaterAmount('');
-    loadData();
+    setWaterSubmitting(true);
+    try {
+      await waterApi.create({
+        date: selectedDate,
+        type: waterType,
+        amountMl: parseInt(waterAmount),
+      });
+      setWaterAmount('');
+      loadData();
+    } finally {
+      setWaterSubmitting(false);
+    }
   }
 
   async function handleDeleteWater(id) {
@@ -141,8 +169,13 @@ export default function DietLog() {
 
   async function handleAddSleep(e) {
     e.preventDefault();
-    await sleepApi.create({ date: selectedDate, bedtime, wakeTime });
-    loadData();
+    setSleepSubmitting(true);
+    try {
+      await sleepApi.create({ date: selectedDate, bedtime, wakeTime });
+      loadData();
+    } finally {
+      setSleepSubmitting(false);
+    }
   }
 
   async function handleDeleteSleep(id) {
@@ -175,12 +208,13 @@ export default function DietLog() {
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-2xl font-bold text-gray-900">Log Meal</h1>
+        <h1 className="text-xl md:text-2xl font-bold text-gray-900">Log Meal</h1>
         <button
           onClick={handleCopyYesterday}
-          className="px-3 py-1.5 bg-green-50 text-green-700 rounded-lg text-xs font-medium hover:bg-green-100"
+          disabled={copyingYesterday}
+          className="px-3 py-1.5 bg-green-50 text-green-700 rounded-lg text-xs font-medium hover:bg-green-100 disabled:opacity-50"
         >
-          Copy Yesterday
+          {copyingYesterday ? 'Copying...' : 'Copy Yesterday'}
         </button>
       </div>
 
@@ -197,11 +231,11 @@ export default function DietLog() {
         return (
           <div className="bg-white rounded-xl p-3 border border-gray-100 shadow-sm mb-4 max-w-md">
             <div className="flex items-center justify-between mb-2">
-              <button onClick={() => setCalendarMonth(new Date(year, month - 1, 1))} className="px-2 py-0.5 bg-gray-100 rounded text-xs hover:bg-gray-200">←</button>
+              <button onClick={() => setCalendarMonth(new Date(year, month - 1, 1))} className="px-2 py-0.5 bg-gray-100 rounded text-xs hover:bg-gray-200">&larr;</button>
               <h3 className="text-xs font-semibold text-gray-700">
                 {calendarMonth.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
               </h3>
-              <button onClick={() => setCalendarMonth(new Date(year, month + 1, 1))} className="px-2 py-0.5 bg-gray-100 rounded text-xs hover:bg-gray-200">→</button>
+              <button onClick={() => setCalendarMonth(new Date(year, month + 1, 1))} className="px-2 py-0.5 bg-gray-100 rounded text-xs hover:bg-gray-200">&rarr;</button>
             </div>
 
             <div className="grid grid-cols-7 gap-0.5 mb-1">
@@ -252,7 +286,7 @@ export default function DietLog() {
         );
       })()}
 
-      <div className="grid grid-cols-4 gap-3 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         <MiniStat label="Calories" value={totalCalories} target={targets?.calorieTarget} unit="kcal" />
         <MiniStat label="Protein" value={totalProtein.toFixed(1)} target={targets?.proteinTargetG} unit="g" />
         <MiniStat label="Carbs" value={totalCarbs.toFixed(1)} target={targets?.carbsTargetG} unit="g" />
@@ -267,24 +301,30 @@ export default function DietLog() {
               <button
                 key={idx}
                 type="button"
+                disabled={quickAddingIdx === idx}
                 onClick={async () => {
-                  if (rec.mealId) {
-                    await dietApi.create({ date: selectedDate, mealType, meal: { id: rec.mealId }, servings: 1 });
-                  } else {
-                    await dietApi.create({ date: selectedDate, mealType, customName: rec.name, calories: rec.calories, proteinG: rec.proteinG, carbsG: 0, fatG: 0, servings: 1 });
+                  setQuickAddingIdx(idx);
+                  try {
+                    if (rec.mealId) {
+                      await dietApi.create({ date: selectedDate, mealType, meal: { id: rec.mealId }, servings: 1 });
+                    } else {
+                      await dietApi.create({ date: selectedDate, mealType, customName: rec.name, calories: rec.calories, proteinG: rec.proteinG, carbsG: 0, fatG: 0, servings: 1 });
+                    }
+                    loadData();
+                  } finally {
+                    setQuickAddingIdx(null);
                   }
-                  loadData();
                 }}
-                className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-700 hover:bg-indigo-50 hover:border-indigo-200"
+                className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-700 hover:bg-indigo-50 hover:border-indigo-200 disabled:opacity-50"
               >
-                {rec.name} <span className="text-gray-400">({rec.calories} kcal)</span>
+                {quickAddingIdx === idx ? 'Adding...' : <>{rec.name} <span className="text-gray-400">({rec.calories} kcal)</span></>}
               </button>
             ))}
           </div>
         </div>
       )}
 
-      <form onSubmit={handleAddMeal} className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm mb-6">
+      <form onSubmit={handleAddMeal} className="bg-white rounded-xl p-4 md:p-6 border border-gray-100 shadow-sm mb-6">
         <div className="flex gap-3 mb-4 items-center">
           <button
             type="button"
@@ -323,7 +363,7 @@ export default function DietLog() {
         </div>
 
         {!customMode ? (
-          <div className="flex gap-3 items-end">
+          <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
             <div className="flex-1">
               <label className="block text-xs text-gray-500 mb-1">Meal</label>
               <select
@@ -345,25 +385,31 @@ export default function DietLog() {
                 </p>
               )}
             </div>
-            <div className="w-24">
-              <label className="block text-xs text-gray-500 mb-1">Servings</label>
-              <input
-                type="number"
-                value={servings}
-                onChange={(e) => setServings(e.target.value)}
-                min="0.25"
-                step="0.25"
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
-              />
+            <div className="flex gap-3 items-end">
+              <div className="w-24">
+                <label className="block text-xs text-gray-500 mb-1">Servings</label>
+                <input
+                  type="number"
+                  value={servings}
+                  onChange={(e) => setServings(e.target.value)}
+                  min="0.25"
+                  step="0.25"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
+              >
+                {submitting ? 'Adding...' : 'Add'}
+              </button>
             </div>
-            <button type="submit" className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700">
-              Add
-            </button>
           </div>
         ) : (
           <div className="space-y-3">
             <input type="text" value={customName} onChange={(e) => setCustomName(e.target.value)} placeholder="Meal name" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" required />
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
               <div>
                 <label className="block text-xs text-gray-500 mb-1">Calories (kcal)</label>
                 <input type="number" value={customCalories} onChange={(e) => setCustomCalories(e.target.value)} placeholder="0" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" required />
@@ -381,7 +427,13 @@ export default function DietLog() {
                 <input type="number" value={customFat} onChange={(e) => setCustomFat(e.target.value)} placeholder="0" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" step="0.1" required />
               </div>
             </div>
-            <button type="submit" className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700">Add</button>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
+            >
+              {submitting ? 'Adding...' : 'Add'}
+            </button>
           </div>
         )}
       </form>
@@ -446,7 +498,7 @@ export default function DietLog() {
         </div>
         <div className="p-4">
           {sleepLogs.length === 0 ? (
-            <form onSubmit={handleAddSleep} className="flex gap-3 items-end">
+            <form onSubmit={handleAddSleep} className="flex flex-col sm:flex-row gap-3 sm:items-end">
               <div>
                 <label className="block text-xs text-gray-500 mb-1">Bedtime</label>
                 <input
@@ -467,8 +519,12 @@ export default function DietLog() {
                   required
                 />
               </div>
-              <button type="submit" className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700">
-                Log Sleep
+              <button
+                type="submit"
+                disabled={sleepSubmitting}
+                className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
+              >
+                {sleepSubmitting ? 'Logging...' : 'Log Sleep'}
               </button>
             </form>
           ) : (
@@ -477,7 +533,7 @@ export default function DietLog() {
                 <div key={s.id} className="flex justify-between items-center bg-purple-50 rounded-lg px-4 py-3">
                   <div>
                     <p className="text-lg font-bold text-purple-700">{formatDuration(s.durationMinutes)}</p>
-                    <p className="text-xs text-purple-500">Bed: {s.bedtime} → Wake: {s.wakeTime}</p>
+                    <p className="text-xs text-purple-500">Bed: {s.bedtime} &rarr; Wake: {s.wakeTime}</p>
                   </div>
                   <button onClick={() => handleDeleteSleep(s.id)} className="text-red-400 text-xs hover:text-red-600">Remove</button>
                 </div>
@@ -493,7 +549,7 @@ export default function DietLog() {
           <h2 className="font-semibold text-gray-900">Water Intake</h2>
         </div>
         <div className="p-4">
-          <form onSubmit={handleAddWater} className="flex gap-3 items-end mb-4">
+          <form onSubmit={handleAddWater} className="flex flex-col sm:flex-row gap-3 sm:items-end mb-4">
             <div>
               <label className="block text-xs text-gray-500 mb-1">Type</label>
               <select
@@ -517,12 +573,16 @@ export default function DietLog() {
                 required
               />
             </div>
-            <button type="submit" className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700">
-              Add
+            <button
+              type="submit"
+              disabled={waterSubmitting}
+              className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
+            >
+              {waterSubmitting ? 'Adding...' : 'Add'}
             </button>
           </form>
 
-          <div className="flex gap-4 mb-4">
+          <div className="flex flex-wrap gap-3 mb-4">
             <div className="bg-blue-50 rounded-lg px-4 py-2">
               <p className="text-xs text-blue-600">Water</p>
               <p className="text-lg font-bold text-blue-700">
@@ -547,7 +607,7 @@ export default function DietLog() {
             <ul className="space-y-1">
               {waterLogs.map((w) => (
                 <li key={w.id} className="flex justify-between items-center text-sm">
-                  <span className="text-gray-600">{w.type} — {w.amountMl} ml</span>
+                  <span className="text-gray-600">{w.type} &mdash; {w.amountMl} ml</span>
                   <button onClick={() => handleDeleteWater(w.id)} className="text-red-400 text-xs hover:text-red-600">Remove</button>
                 </li>
               ))}
@@ -562,7 +622,7 @@ export default function DietLog() {
           <h2 className="font-semibold text-gray-900">Health Notes</h2>
         </div>
         <div className="p-4">
-          <form onSubmit={handleAddNote} className="flex gap-3 items-end mb-4">
+          <form onSubmit={handleAddNote} className="flex flex-col sm:flex-row gap-3 sm:items-end mb-4">
             <div className="flex-1">
               <label className="block text-xs text-gray-500 mb-1">Note</label>
               <input
@@ -586,8 +646,12 @@ export default function DietLog() {
                 <option value="serious">Serious</option>
               </select>
             </div>
-            <button type="submit" className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700">
-              Add
+            <button
+              type="submit"
+              disabled={noteSubmitting}
+              className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
+            >
+              {noteSubmitting ? 'Adding...' : 'Add'}
             </button>
           </form>
 

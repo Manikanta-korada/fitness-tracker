@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { progressApi, exercisesApi, targetsApi, waterApi, sleepApi, healthNotesApi } from '../api/client';
 
@@ -25,6 +25,9 @@ export default function Progress() {
   const [personalRecords, setPersonalRecords] = useState([]);
   const [healthTimeline, setHealthTimeline] = useState([]);
   const [loaded, setLoaded] = useState({});
+  const [loggingWeight, setLoggingWeight] = useState(false);
+  const [savingTargets, setSavingTargets] = useState(false);
+  const reportRef = useRef(null);
 
   useEffect(() => {
     loadData();
@@ -58,6 +61,10 @@ export default function Progress() {
     return <div className="flex items-center justify-center py-8"><div className="w-6 h-6 border-3 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div></div>;
   }
 
+  function handleExportPDF() {
+    window.print();
+  }
+
   async function loadExerciseProgress(exerciseId) {
     setSelectedExercise(exerciseId);
     if (exerciseId) {
@@ -68,39 +75,57 @@ export default function Progress() {
 
   async function handleLogWeight(e) {
     e.preventDefault();
-    await progressApi.logWeight({ weightKg: parseFloat(newWeight) });
-    setNewWeight('');
-    setWeightData(await progressApi.getWeight());
+    setLoggingWeight(true);
+    try {
+      await progressApi.logWeight({ weightKg: parseFloat(newWeight) });
+      setNewWeight('');
+      setWeightData(await progressApi.getWeight());
+    } finally {
+      setLoggingWeight(false);
+    }
   }
 
   async function handleSaveTargets(e) {
     e.preventDefault();
-    await targetsApi.update({
-      calorieTarget: parseInt(targetCalories),
-      proteinTargetG: parseFloat(targetProtein),
-      carbsTargetG: parseFloat(targetCarbs),
-      fatTargetG: parseFloat(targetFat),
-    });
-    setShowTargetForm(false);
-    setTargets(await targetsApi.get());
+    setSavingTargets(true);
+    try {
+      await targetsApi.update({
+        calorieTarget: parseInt(targetCalories),
+        proteinTargetG: parseFloat(targetProtein),
+        carbsTargetG: parseFloat(targetCarbs),
+        fatTargetG: parseFloat(targetFat),
+      });
+      setShowTargetForm(false);
+      setTargets(await targetsApi.get());
+    } finally {
+      setSavingTargets(false);
+    }
   }
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Progress</h1>
-        <button
-          onClick={() => setShowTargetForm(!showTargetForm)}
-          className="text-sm text-indigo-600 font-medium hover:text-indigo-700"
-        >
-          {showTargetForm ? 'Cancel' : 'Edit Targets'}
-        </button>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+        <h1 className="text-xl md:text-2xl font-bold text-gray-900">Progress</h1>
+        <div className="flex gap-3">
+          <button
+            onClick={handleExportPDF}
+            className="text-sm text-white bg-indigo-600 px-3 py-1.5 rounded-lg font-medium hover:bg-indigo-700"
+          >
+            Download Report
+          </button>
+          <button
+            onClick={() => setShowTargetForm(!showTargetForm)}
+            className="text-sm text-indigo-600 font-medium hover:text-indigo-700"
+          >
+            {showTargetForm ? 'Cancel' : 'Edit Targets'}
+          </button>
+        </div>
       </div>
 
       {showTargetForm && (
-        <form onSubmit={handleSaveTargets} className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm mb-6">
+        <form onSubmit={handleSaveTargets} className="bg-white rounded-xl p-4 md:p-6 border border-gray-100 shadow-sm mb-6">
           <h3 className="font-semibold text-gray-900 mb-3">Daily Targets</h3>
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <div>
               <label className="text-xs text-gray-500">Calories</label>
               <input type="number" value={targetCalories} onChange={(e) => setTargetCalories(e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
@@ -118,13 +143,19 @@ export default function Progress() {
               <input type="number" value={targetFat} onChange={(e) => setTargetFat(e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" step="0.1" />
             </div>
           </div>
-          <button type="submit" className="mt-4 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700">Save Targets</button>
+          <button
+            type="submit"
+            disabled={savingTargets}
+            className="mt-4 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
+          >
+            {savingTargets ? 'Saving...' : 'Save Targets'}
+          </button>
         </form>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div ref={reportRef} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Body Weight Chart */}
-        <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
+        <div className="bg-white rounded-xl p-4 md:p-6 border border-gray-100 shadow-sm">
           <h2 className="font-semibold text-gray-900 mb-4">Body Weight</h2>
           <form onSubmit={handleLogWeight} className="flex gap-2 mb-4">
             <input
@@ -136,7 +167,13 @@ export default function Progress() {
               className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm flex-1"
               required
             />
-            <button type="submit" className="bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-sm">Log</button>
+            <button
+              type="submit"
+              disabled={loggingWeight}
+              className="bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-sm disabled:opacity-50"
+            >
+              {loggingWeight ? 'Logging...' : 'Log'}
+            </button>
           </form>
           {!loaded.weight ? <CardSpinner /> : weightData.length > 0 ? (
             <ResponsiveContainer width="100%" height={200}>
@@ -154,7 +191,7 @@ export default function Progress() {
         </div>
 
         {/* Sleep Duration Trend */}
-        <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
+        <div className="bg-white rounded-xl p-4 md:p-6 border border-gray-100 shadow-sm">
           <h2 className="font-semibold text-gray-900 mb-4">Sleep Duration (30 Days)</h2>
           {!loaded.sleep ? <CardSpinner /> : sleepTrend.length > 0 ? (
             <ResponsiveContainer width="100%" height={200}>
@@ -172,7 +209,7 @@ export default function Progress() {
         </div>
 
         {/* Calorie Trend Chart */}
-        <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
+        <div className="bg-white rounded-xl p-4 md:p-6 border border-gray-100 shadow-sm">
           <h2 className="font-semibold text-gray-900 mb-4">Calorie Trend (30 days)</h2>
           {!loaded.calories ? <CardSpinner /> : calorieData.length > 0 ? (
             <ResponsiveContainer width="100%" height={200}>
@@ -190,7 +227,7 @@ export default function Progress() {
         </div>
 
         {/* Macros Trend (30 days) */}
-        <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
+        <div className="bg-white rounded-xl p-4 md:p-6 border border-gray-100 shadow-sm">
           <h2 className="font-semibold text-gray-900 mb-4">Macros Trend (30 Days)</h2>
           {!loaded.macros ? <CardSpinner /> : macroData.length > 0 ? (
             <ResponsiveContainer width="100%" height={200}>
@@ -211,7 +248,7 @@ export default function Progress() {
         </div>
 
         {/* Meal Type Calorie Breakdown */}
-        <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
+        <div className="bg-white rounded-xl p-4 md:p-6 border border-gray-100 shadow-sm">
           <h2 className="font-semibold text-gray-900 mb-4">Calories by Meal Type (30 Days)</h2>
           {!loaded.mealBreakdown ? <CardSpinner /> : mealBreakdown.length > 0 ? (
             <ResponsiveContainer width="100%" height={200}>
@@ -229,7 +266,7 @@ export default function Progress() {
         </div>
 
         {/* Workout Frequency */}
-        <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
+        <div className="bg-white rounded-xl p-4 md:p-6 border border-gray-100 shadow-sm">
           <h2 className="font-semibold text-gray-900 mb-4">Workout Frequency (Per Week)</h2>
           {!loaded.workoutFreq ? <CardSpinner /> : workoutFrequency.length > 0 ? (
             <ResponsiveContainer width="100%" height={200}>
@@ -247,7 +284,7 @@ export default function Progress() {
         </div>
 
         {/* Muscle Group Volume */}
-        <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
+        <div className="bg-white rounded-xl p-4 md:p-6 border border-gray-100 shadow-sm">
           <h2 className="font-semibold text-gray-900 mb-4">Volume by Muscle Group (30 Days)</h2>
           {!loaded.muscleVol ? <CardSpinner /> : muscleVolume.length > 0 ? (
             <ResponsiveContainer width="100%" height={200}>
@@ -265,7 +302,7 @@ export default function Progress() {
         </div>
 
         {/* Water Intake - Weekly Bar Chart */}
-        <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
+        <div className="bg-white rounded-xl p-4 md:p-6 border border-gray-100 shadow-sm">
           <h2 className="font-semibold text-gray-900 mb-4">Water Intake (Last 7 Days)</h2>
           {!loaded.waterWeekly ? <CardSpinner /> : waterWeekly.length > 0 ? (
             <ResponsiveContainer width="100%" height={200}>
@@ -285,7 +322,7 @@ export default function Progress() {
         </div>
 
         {/* Water Intake - Monthly Trend */}
-        <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
+        <div className="bg-white rounded-xl p-4 md:p-6 border border-gray-100 shadow-sm">
           <h2 className="font-semibold text-gray-900 mb-4">Water Intake Trend (30 Days)</h2>
           {!loaded.waterMonthly ? <CardSpinner /> : waterMonthly.length > 0 ? (
             <ResponsiveContainer width="100%" height={200}>
@@ -306,12 +343,12 @@ export default function Progress() {
         </div>
 
         {/* Exercise Progress Chart */}
-        <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm lg:col-span-2">
+        <div className="bg-white rounded-xl p-4 md:p-6 border border-gray-100 shadow-sm lg:col-span-2">
           <h2 className="font-semibold text-gray-900 mb-4">Exercise Progress</h2>
           <select
             value={selectedExercise}
             onChange={(e) => loadExerciseProgress(e.target.value)}
-            className="border border-gray-200 rounded-lg px-3 py-2 text-sm mb-4"
+            className="border border-gray-200 rounded-lg px-3 py-2 text-sm mb-4 w-full sm:w-auto"
           >
             <option value="">Select an exercise...</option>
             {Object.entries(exercises.reduce((groups, ex) => {
@@ -342,7 +379,7 @@ export default function Progress() {
 
         {/* Personal Records */}
         {(loaded.records && personalRecords.length > 0) && (
-          <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm lg:col-span-2">
+          <div className="bg-white rounded-xl p-4 md:p-6 border border-gray-100 shadow-sm lg:col-span-2">
             <h2 className="font-semibold text-gray-900 mb-4">Personal Records</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {Object.entries(personalRecords.reduce((groups, pr) => {
@@ -368,7 +405,7 @@ export default function Progress() {
 
         {/* Health Timeline */}
         {(loaded.health && healthTimeline.length > 0) && (
-          <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm lg:col-span-2">
+          <div className="bg-white rounded-xl p-4 md:p-6 border border-gray-100 shadow-sm lg:col-span-2">
             <h2 className="font-semibold text-gray-900 mb-4">Health Timeline (30 Days)</h2>
             <div className="space-y-3">
               {healthTimeline.map((n) => (

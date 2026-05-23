@@ -20,6 +20,9 @@ export default function WorkoutLog() {
   const [monthSessions, setMonthSessions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [sessionsLoading, setSessionsLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [savingTemplate, setSavingTemplate] = useState(false);
+  const [applyingTemplate, setApplyingTemplate] = useState(null);
 
   const workoutDates = new Set(monthSessions.map(s => s.date));
   const sessions = monthSessions.filter(s => s.date === viewDate);
@@ -122,22 +125,32 @@ export default function WorkoutLog() {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (editingId) {
-      await workoutsApi.update(editingId, { name: sessionName, date: workoutDate, entries });
-    } else {
-      await workoutsApi.create({
-        name: sessionName,
-        date: workoutDate,
-        entries,
-      });
+    setSaving(true);
+    try {
+      if (editingId) {
+        await workoutsApi.update(editingId, { name: sessionName, date: workoutDate, entries });
+      } else {
+        await workoutsApi.create({
+          name: sessionName,
+          date: workoutDate,
+          entries,
+        });
+      }
+      cancelForm();
+      loadData();
+    } finally {
+      setSaving(false);
     }
-    cancelForm();
-    loadData();
   }
 
   async function handleApplyTemplate(templateId) {
-    await templatesApi.apply(templateId);
-    loadData();
+    setApplyingTemplate(templateId);
+    try {
+      await templatesApi.apply(templateId);
+      loadData();
+    } finally {
+      setApplyingTemplate(null);
+    }
   }
 
   async function handleDelete(id) {
@@ -195,11 +208,16 @@ export default function WorkoutLog() {
 
   async function handleTemplateSubmit(e) {
     e.preventDefault();
-    await templatesApi.create({ name: templateName, entries: templateEntries });
-    setShowTemplateForm(false);
-    setTemplateName('');
-    setTemplateEntries([]);
-    loadData();
+    setSavingTemplate(true);
+    try {
+      await templatesApi.create({ name: templateName, entries: templateEntries });
+      setShowTemplateForm(false);
+      setTemplateName('');
+      setTemplateEntries([]);
+      loadData();
+    } finally {
+      setSavingTemplate(false);
+    }
   }
 
   async function handleDeleteTemplate(id) {
@@ -211,8 +229,8 @@ export default function WorkoutLog() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Log Workout</h1>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+        <h1 className="text-xl md:text-2xl font-bold text-gray-900">Log Workout</h1>
         <div className="flex gap-2">
           <button
             onClick={() => setActiveTab('log')}
@@ -242,7 +260,7 @@ export default function WorkoutLog() {
           </div>
 
           {showTemplateForm && (
-            <form onSubmit={handleTemplateSubmit} className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm mb-6">
+            <form onSubmit={handleTemplateSubmit} className="bg-white rounded-xl p-4 md:p-6 border border-gray-100 shadow-sm mb-6">
               <input
                 type="text"
                 value={templateName}
@@ -272,30 +290,40 @@ export default function WorkoutLog() {
                     </select>
                     <button type="button" onClick={() => removeTemplateEntry(entryIdx)} className="text-red-500 text-sm">Remove</button>
                   </div>
-                  <div className="flex gap-2 items-center mb-1 text-xs font-medium text-gray-500 ml-2">
-                    <span className="w-10">Set</span>
-                    <span className="w-16 text-center">Reps</span>
-                    <span className="w-20 text-center">Weight (kg)</span>
-                    <span className="w-20 text-center">Min</span>
-                    <span className="w-20 text-center">Dist (km)</span>
-                    <span className="w-6"></span>
-                  </div>
-                  {entry.sets.map((set, setIdx) => (
-                    <div key={setIdx} className="flex gap-2 items-center mb-1 ml-2">
-                      <span className="w-10 text-sm text-gray-500">{set.setNumber}</span>
-                      <input type="number" value={set.reps} onChange={(e) => updateTemplateSet(entryIdx, setIdx, 'reps', e.target.value)} className="w-16 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center" min="0" />
-                      <input type="number" value={set.weightKg} onChange={(e) => updateTemplateSet(entryIdx, setIdx, 'weightKg', e.target.value)} className="w-20 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center" step="0.5" />
-                      <input type="number" value={set.durationMinutes || ''} onChange={(e) => updateTemplateSet(entryIdx, setIdx, 'durationMinutes', e.target.value || null)} className="w-20 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center" placeholder="-" min="0" step="0.01" />
-                      <input type="number" value={set.distanceKm || ''} onChange={(e) => updateTemplateSet(entryIdx, setIdx, 'distanceKm', e.target.value || null)} className="w-20 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center" placeholder="-" step="0.1" min="0" />
-                      <button type="button" onClick={() => removeTemplateSet(entryIdx, setIdx)} className="text-red-400 text-xs w-6">X</button>
+                  <div className="overflow-x-auto">
+                    <div className="min-w-[340px]">
+                      <div className="flex gap-2 items-center mb-1 text-xs font-medium text-gray-500 ml-2">
+                        <span className="w-10">Set</span>
+                        <span className="w-16 text-center">Reps</span>
+                        <span className="w-20 text-center">Weight (kg)</span>
+                        <span className="w-20 text-center">Min</span>
+                        <span className="w-20 text-center">Dist (km)</span>
+                        <span className="w-6"></span>
+                      </div>
+                      {entry.sets.map((set, setIdx) => (
+                        <div key={setIdx} className="flex gap-2 items-center mb-1 ml-2">
+                          <span className="w-10 text-sm text-gray-500">{set.setNumber}</span>
+                          <input type="number" value={set.reps} onChange={(e) => updateTemplateSet(entryIdx, setIdx, 'reps', e.target.value)} className="w-16 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center" min="0" />
+                          <input type="number" value={set.weightKg} onChange={(e) => updateTemplateSet(entryIdx, setIdx, 'weightKg', e.target.value)} className="w-20 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center" step="0.5" />
+                          <input type="number" value={set.durationMinutes || ''} onChange={(e) => updateTemplateSet(entryIdx, setIdx, 'durationMinutes', e.target.value || null)} className="w-20 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center" placeholder="-" min="0" step="0.01" />
+                          <input type="number" value={set.distanceKm || ''} onChange={(e) => updateTemplateSet(entryIdx, setIdx, 'distanceKm', e.target.value || null)} className="w-20 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center" placeholder="-" step="0.1" min="0" />
+                          <button type="button" onClick={() => removeTemplateSet(entryIdx, setIdx)} className="text-red-400 text-xs w-6">X</button>
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  </div>
                   <button type="button" onClick={() => addTemplateSet(entryIdx)} className="text-indigo-500 text-xs font-medium ml-2 mt-1">+ Add Set</button>
                 </div>
               ))}
               <div className="flex gap-3 mt-4">
                 <button type="button" onClick={addTemplateEntry} className="text-indigo-600 text-sm font-medium">+ Add Exercise</button>
-                <button type="submit" className="ml-auto bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700">Save Template</button>
+                <button
+                  type="submit"
+                  disabled={savingTemplate}
+                  className="ml-auto bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
+                >
+                  {savingTemplate ? 'Saving...' : 'Save Template'}
+                </button>
               </div>
             </form>
           )}
@@ -306,7 +334,13 @@ export default function WorkoutLog() {
                 <div className="flex justify-between items-start">
                   <h3 className="font-semibold text-gray-900">{template.name}</h3>
                   <div className="flex gap-3">
-                    <button onClick={() => { handleApplyTemplate(template.id); setActiveTab('log'); }} className="text-indigo-500 text-xs hover:text-indigo-700">Apply</button>
+                    <button
+                      onClick={() => { handleApplyTemplate(template.id); setActiveTab('log'); }}
+                      disabled={applyingTemplate === template.id}
+                      className="text-indigo-500 text-xs hover:text-indigo-700 disabled:opacity-50"
+                    >
+                      {applyingTemplate === template.id ? 'Applying...' : 'Apply'}
+                    </button>
                     <button onClick={() => handleDeleteTemplate(template.id)} className="text-red-400 text-xs hover:text-red-600">Delete</button>
                   </div>
                 </div>
@@ -336,15 +370,16 @@ export default function WorkoutLog() {
 
       {activeTab === 'log' && (
         <>
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
             <div className="flex flex-wrap gap-2">
               {templates.length > 0 && !showForm && templates.map((t) => (
                 <button
                   key={t.id}
                   onClick={() => handleApplyTemplate(t.id)}
-                  className="px-3 py-1.5 bg-indigo-50 text-indigo-700 rounded-lg text-xs hover:bg-indigo-100"
+                  disabled={applyingTemplate === t.id}
+                  className="px-3 py-1.5 bg-indigo-50 text-indigo-700 rounded-lg text-xs hover:bg-indigo-100 disabled:opacity-50"
                 >
-                  {t.name}
+                  {applyingTemplate === t.id ? 'Applying...' : t.name}
                 </button>
               ))}
             </div>
@@ -357,7 +392,7 @@ export default function WorkoutLog() {
           </div>
 
       {showForm && (
-        <form onSubmit={handleSubmit} className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm mb-6">
+        <form onSubmit={handleSubmit} className="bg-white rounded-xl p-4 md:p-6 border border-gray-100 shadow-sm mb-6">
           <div className="flex justify-between items-center mb-3">
             <h3 className="text-sm font-semibold text-gray-700">{editingId ? 'Edit Workout' : 'New Workout'}</h3>
             {!editingId && (
@@ -366,7 +401,7 @@ export default function WorkoutLog() {
               </button>
             )}
           </div>
-          <div className="flex gap-3 mb-4">
+          <div className="flex flex-col sm:flex-row gap-3 mb-4">
             <input
               type="text"
               value={sessionName}
@@ -405,53 +440,57 @@ export default function WorkoutLog() {
                 <button type="button" onClick={() => removeEntry(entryIdx)} className="text-red-500 text-sm">Remove</button>
               </div>
 
-              <div className="flex gap-2 items-center mb-1 text-xs font-medium text-gray-500 ml-2">
-                <span className="w-10">Set</span>
-                <span className="w-16 text-center">Reps</span>
-                <span className="w-20 text-center">Weight (kg)</span>
-                <span className="w-20 text-center">Min</span>
-                <span className="w-20 text-center">Dist (km)</span>
-                <span className="w-6"></span>
-              </div>
+              <div className="overflow-x-auto">
+                <div className="min-w-[340px]">
+                  <div className="flex gap-2 items-center mb-1 text-xs font-medium text-gray-500 ml-2">
+                    <span className="w-10">Set</span>
+                    <span className="w-16 text-center">Reps</span>
+                    <span className="w-20 text-center">Weight (kg)</span>
+                    <span className="w-20 text-center">Min</span>
+                    <span className="w-20 text-center">Dist (km)</span>
+                    <span className="w-6"></span>
+                  </div>
 
-              {entry.sets.map((set, setIdx) => (
-                <div key={setIdx} className="flex gap-2 items-center mb-1 ml-2">
-                  <span className="w-10 text-sm text-gray-500">{set.setNumber}</span>
-                  <input
-                    type="number"
-                    value={set.reps}
-                    onChange={(e) => updateSet(entryIdx, setIdx, 'reps', e.target.value)}
-                    className="w-16 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center"
-                    min="0"
-                  />
-                  <input
-                    type="number"
-                    value={set.weightKg}
-                    onChange={(e) => updateSet(entryIdx, setIdx, 'weightKg', e.target.value)}
-                    className="w-20 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center"
-                    step="0.5"
-                  />
-                  <input
-                    type="number"
-                    value={set.durationMinutes || ''}
-                    onChange={(e) => updateSet(entryIdx, setIdx, 'durationMinutes', e.target.value || null)}
-                    className="w-20 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center"
-                    placeholder="-"
-                    min="0"
-                    step="0.01"
-                  />
-                  <input
-                    type="number"
-                    value={set.distanceKm || ''}
-                    onChange={(e) => updateSet(entryIdx, setIdx, 'distanceKm', e.target.value || null)}
-                    className="w-20 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center"
-                    placeholder="-"
-                    step="0.1"
-                    min="0"
-                  />
-                  <button type="button" onClick={() => removeSet(entryIdx, setIdx)} className="text-red-400 text-xs w-6">X</button>
+                  {entry.sets.map((set, setIdx) => (
+                    <div key={setIdx} className="flex gap-2 items-center mb-1 ml-2">
+                      <span className="w-10 text-sm text-gray-500">{set.setNumber}</span>
+                      <input
+                        type="number"
+                        value={set.reps}
+                        onChange={(e) => updateSet(entryIdx, setIdx, 'reps', e.target.value)}
+                        className="w-16 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center"
+                        min="0"
+                      />
+                      <input
+                        type="number"
+                        value={set.weightKg}
+                        onChange={(e) => updateSet(entryIdx, setIdx, 'weightKg', e.target.value)}
+                        className="w-20 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center"
+                        step="0.5"
+                      />
+                      <input
+                        type="number"
+                        value={set.durationMinutes || ''}
+                        onChange={(e) => updateSet(entryIdx, setIdx, 'durationMinutes', e.target.value || null)}
+                        className="w-20 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center"
+                        placeholder="-"
+                        min="0"
+                        step="0.01"
+                      />
+                      <input
+                        type="number"
+                        value={set.distanceKm || ''}
+                        onChange={(e) => updateSet(entryIdx, setIdx, 'distanceKm', e.target.value || null)}
+                        className="w-20 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center"
+                        placeholder="-"
+                        step="0.1"
+                        min="0"
+                      />
+                      <button type="button" onClick={() => removeSet(entryIdx, setIdx)} className="text-red-400 text-xs w-6">X</button>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              </div>
 
               <button type="button" onClick={() => addSet(entryIdx)} className="text-indigo-500 text-xs font-medium ml-2 mt-1">
                 + Add Set
@@ -463,8 +502,12 @@ export default function WorkoutLog() {
             <button type="button" onClick={addEntry} className="text-indigo-600 text-sm font-medium">
               + Add Exercise
             </button>
-            <button type="submit" className="ml-auto bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700">
-              {editingId ? 'Update Workout' : 'Save Workout'}
+            <button
+              type="submit"
+              disabled={saving}
+              className="ml-auto bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
+            >
+              {saving ? 'Saving...' : (editingId ? 'Update Workout' : 'Save Workout')}
             </button>
           </div>
         </form>
@@ -481,7 +524,6 @@ export default function WorkoutLog() {
 
         const mondayOfWeek = new Date();
         mondayOfWeek.setDate(mondayOfWeek.getDate() - ((mondayOfWeek.getDay() + 6) % 7));
-        const weekStart = mondayOfWeek.toISOString().split('T')[0];
         const weekDays = [];
         for (let i = 0; i < 6; i++) {
           const d = new Date(mondayOfWeek);
@@ -493,11 +535,11 @@ export default function WorkoutLog() {
         return (
           <div className="bg-white rounded-xl p-3 border border-gray-100 shadow-sm mb-4 max-w-md">
             <div className="flex items-center justify-between mb-2">
-              <button onClick={() => setCalendarMonth(new Date(year, month - 1, 1))} className="px-2 py-0.5 bg-gray-100 rounded text-xs hover:bg-gray-200">←</button>
+              <button onClick={() => setCalendarMonth(new Date(year, month - 1, 1))} className="px-2 py-0.5 bg-gray-100 rounded text-xs hover:bg-gray-200">&larr;</button>
               <h3 className="text-xs font-semibold text-gray-700">
                 {calendarMonth.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
               </h3>
-              <button onClick={() => setCalendarMonth(new Date(year, month + 1, 1))} className="px-2 py-0.5 bg-gray-100 rounded text-xs hover:bg-gray-200">→</button>
+              <button onClick={() => setCalendarMonth(new Date(year, month + 1, 1))} className="px-2 py-0.5 bg-gray-100 rounded text-xs hover:bg-gray-200">&rarr;</button>
             </div>
 
             <div className="grid grid-cols-7 gap-0.5 mb-1">
@@ -579,22 +621,26 @@ export default function WorkoutLog() {
                 {session.entries.map((entry, idx) => (
                   <div key={idx} className="bg-gray-50 rounded-lg px-3 py-2">
                     <p className="font-medium text-gray-700 text-sm mb-1">{entry.exercise?.name}</p>
-                    <div className="grid grid-cols-5 text-xs font-medium text-gray-400 mb-1 ml-2">
-                      <span>Set</span>
-                      <span className="text-center">Reps</span>
-                      <span className="text-center">Weight</span>
-                      <span className="text-center">Min</span>
-                      <span className="text-center">Dist</span>
-                    </div>
-                    {entry.sets?.map((set, sIdx) => (
-                      <div key={sIdx} className="grid grid-cols-5 text-sm text-gray-600 ml-2">
-                        <span>{set.setNumber}</span>
-                        <span className="text-center">{set.reps || '-'}</span>
-                        <span className="text-center">{set.weightKg || '-'}</span>
-                        <span className="text-center">{set.durationMinutes || '-'}</span>
-                        <span className="text-center">{set.distanceKm || '-'}</span>
+                    <div className="overflow-x-auto">
+                      <div className="min-w-[280px]">
+                        <div className="grid grid-cols-5 text-xs font-medium text-gray-400 mb-1 ml-2">
+                          <span>Set</span>
+                          <span className="text-center">Reps</span>
+                          <span className="text-center">Weight</span>
+                          <span className="text-center">Min</span>
+                          <span className="text-center">Dist</span>
+                        </div>
+                        {entry.sets?.map((set, sIdx) => (
+                          <div key={sIdx} className="grid grid-cols-5 text-sm text-gray-600 ml-2">
+                            <span>{set.setNumber}</span>
+                            <span className="text-center">{set.reps || '-'}</span>
+                            <span className="text-center">{set.weightKg || '-'}</span>
+                            <span className="text-center">{set.durationMinutes || '-'}</span>
+                            <span className="text-center">{set.distanceKm || '-'}</span>
+                          </div>
+                        ))}
                       </div>
-                    ))}
+                    </div>
                   </div>
                 ))}
               </div>
