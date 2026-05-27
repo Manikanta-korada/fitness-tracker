@@ -129,7 +129,7 @@ export default function WorkoutLog() {
     setShowForm(false);
     setEditingId(null);
     setSessionName('');
-    setWorkoutDate(new Date().toISOString().split('T')[0]);
+    setWorkoutDate(viewDate);
     setEntries([]);
   }
 
@@ -416,7 +416,7 @@ export default function WorkoutLog() {
               ))}
             </div>
             <button
-              onClick={() => showForm ? cancelForm() : setShowForm(true)}
+              onClick={() => { if (showForm) { cancelForm(); } else { setWorkoutDate(viewDate); setShowForm(true); } }}
               className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700"
             >
               {showForm ? 'Cancel' : '+ New Workout'}

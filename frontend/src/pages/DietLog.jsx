@@ -243,7 +243,14 @@ export default function DietLog() {
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-xl md:text-2xl font-bold text-gray-900">Log Meal</h1>
+        <div>
+          <h1 className="text-xl md:text-2xl font-bold text-gray-900">Log Meal</h1>
+          <p className="text-sm text-gray-500 mt-0.5">
+            {selectedDate === new Date().toISOString().split('T')[0]
+              ? new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
+              : new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+          </p>
+        </div>
         <button
           onClick={handleCopyYesterday}
           disabled={copyingYesterday}

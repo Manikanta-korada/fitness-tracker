@@ -11,6 +11,7 @@ export default function Progress() {
   const [targets, setTargets] = useState(null);
   const [showTargetForm, setShowTargetForm] = useState(false);
   const [newWeight, setNewWeight] = useState('');
+  const [weightDate, setWeightDate] = useState(new Date().toISOString().split('T')[0]);
   const [targetCalories, setTargetCalories] = useState('');
   const [targetProtein, setTargetProtein] = useState('');
   const [targetCarbs, setTargetCarbs] = useState('');
@@ -79,8 +80,9 @@ export default function Progress() {
     if (isNaN(weight) || weight <= 0 || weight > 500) return;
     setLoggingWeight(true);
     try {
-      await progressApi.logWeight({ weightKg: weight });
+      await progressApi.logWeight({ weightKg: weight, date: weightDate });
       setNewWeight('');
+      setWeightDate(new Date().toISOString().split('T')[0]);
       setWeightData(await progressApi.getWeight());
     } finally {
       setLoggingWeight(false);
@@ -165,6 +167,15 @@ export default function Progress() {
         <div className="bg-white rounded-xl p-4 md:p-6 border border-gray-100 shadow-sm">
           <h2 className="font-semibold text-gray-900 mb-4">Body Weight</h2>
           <form onSubmit={handleLogWeight} className="flex gap-2 mb-4">
+            <input
+              type="date"
+              value={weightDate}
+              onChange={(e) => setWeightDate(e.target.value)}
+              max={new Date().toISOString().split('T')[0]}
+              aria-label="Date for weight entry"
+              className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm"
+              required
+            />
             <input
               type="number"
               value={newWeight}

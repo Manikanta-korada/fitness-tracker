@@ -46,8 +46,8 @@ export default function Layout() {
         className={`
         fixed h-full z-50 w-56 bg-white border-r border-gray-200 p-4 flex flex-col
         transition-transform duration-200 ease-in-out
-        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
         md:translate-x-0 md:z-auto
+        ${sidebarOpen ? 'translate-x-0' : 'max-md:-translate-x-full'}
       `}>
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-bold text-indigo-600 px-3">FitBot</h1>

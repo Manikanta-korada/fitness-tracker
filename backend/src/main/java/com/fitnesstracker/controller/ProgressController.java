@@ -42,10 +42,14 @@ public class ProgressController {
     @PostMapping("/weight")
     public BodyWeight logWeight(@RequestBody BodyWeight bodyWeight, HttpServletRequest request) {
         String userId = (String) request.getAttribute("userId");
-        bodyWeight.setUserId(userId);
-        if (bodyWeight.getDate() == null) {
-            bodyWeight.setDate(LocalDate.now());
+        LocalDate date = bodyWeight.getDate() != null ? bodyWeight.getDate() : LocalDate.now();
+        BodyWeight existing = bodyWeightRepository.findByUserIdAndDate(userId, date).orElse(null);
+        if (existing != null) {
+            existing.setWeightKg(bodyWeight.getWeightKg());
+            return bodyWeightRepository.save(existing);
         }
+        bodyWeight.setUserId(userId);
+        bodyWeight.setDate(date);
         return bodyWeightRepository.save(bodyWeight);
     }
 
