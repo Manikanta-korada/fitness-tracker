@@ -55,6 +55,7 @@ export default function WorkoutLog() {
   }
 
   async function loadDateSessions() {
+    setSessions([]);
     setSessionsLoading(true);
     const data = await workoutsApi.getByDate(viewDate);
     setSessions(data);
