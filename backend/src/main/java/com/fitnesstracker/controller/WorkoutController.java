@@ -34,7 +34,7 @@ public class WorkoutController {
             HttpServletRequest request) {
         String userId = (String) request.getAttribute("userId");
         if (date != null) {
-            return sessionRepository.findByUserIdAndDateWithDetails(userId, date);
+            return sessionRepository.findByUserIdAndDate(userId, date);
         }
         if (from != null && to != null) {
             return sessionRepository.findByUserIdAndDateBetween(userId, from, to);
