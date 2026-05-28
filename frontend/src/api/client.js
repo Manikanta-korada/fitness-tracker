@@ -40,6 +40,8 @@ export const workoutsApi = {
     const qs = params.toString();
     return request(`/workouts${qs ? '?' + qs : ''}`);
   },
+  getByDate: (date) => request(`/workouts?date=${date}`),
+  getCalendar: (from, to) => request(`/workouts/calendar?from=${from}&to=${to}`),
   getById: (id) => request(`/workouts/${id}`),
   create: (session) => request('/workouts', { method: 'POST', body: JSON.stringify(session) }),
   update: (id, session) => request(`/workouts/${id}`, { method: 'PUT', body: JSON.stringify(session) }),

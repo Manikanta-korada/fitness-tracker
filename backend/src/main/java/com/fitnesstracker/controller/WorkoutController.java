@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/workouts")
@@ -29,12 +30,33 @@ public class WorkoutController {
     public List<WorkoutSession> getAll(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
             HttpServletRequest request) {
         String userId = (String) request.getAttribute("userId");
+        if (date != null) {
+            return sessionRepository.findByUserIdAndDateWithDetails(userId, date);
+        }
         if (from != null && to != null) {
             return sessionRepository.findByUserIdAndDateBetween(userId, from, to);
         }
         return sessionRepository.findByUserId(userId);
+    }
+
+    @GetMapping("/calendar")
+    public List<Map<String, Object>> getCalendar(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            HttpServletRequest request) {
+        String userId = (String) request.getAttribute("userId");
+        List<Object[]> counts = sessionRepository.countByUserIdAndDateBetween(userId, from, to);
+        List<Map<String, Object>> result = new java.util.ArrayList<>();
+        for (Object[] row : counts) {
+            Map<String, Object> entry = new java.util.HashMap<>();
+            entry.put("date", row[0]);
+            entry.put("count", row[1]);
+            result.add(entry);
+        }
+        return result;
     }
 
     @GetMapping("/{id}")

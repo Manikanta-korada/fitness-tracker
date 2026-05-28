@@ -17,7 +17,6 @@ export default function WorkoutLog() {
   const [viewDate, setViewDate] = useState(new Date().toISOString().split('T')[0]);
   const [expandedSession, setExpandedSession] = useState(null);
   const [calendarMonth, setCalendarMonth] = useState(new Date());
-  const [monthSessions, setMonthSessions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [sessionsLoading, setSessionsLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -25,8 +24,9 @@ export default function WorkoutLog() {
   const [applyingTemplate, setApplyingTemplate] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
 
-  const workoutDates = new Set(monthSessions.map(s => s.date));
-  const sessions = monthSessions.filter(s => s.date === viewDate);
+  const [calendarDates, setCalendarDates] = useState({});
+  const [sessions, setSessions] = useState([]);
+  const workoutDates = new Set(Object.keys(calendarDates));
 
   useEffect(() => {
     Promise.allSettled([
@@ -36,21 +36,34 @@ export default function WorkoutLog() {
   }, []);
 
   useEffect(() => {
-    loadMonthWorkouts();
+    loadCalendar();
   }, [calendarMonth]);
 
-  async function loadMonthWorkouts() {
-    setSessionsLoading(true);
+  useEffect(() => {
+    loadDateSessions();
+  }, [viewDate]);
+
+  async function loadCalendar() {
     const year = calendarMonth.getFullYear();
     const month = calendarMonth.getMonth();
     const from = new Date(year, month, 1).toISOString().split('T')[0];
     const to = new Date(year, month + 1, 0).toISOString().split('T')[0];
-    setMonthSessions(await workoutsApi.getAll(from, to));
+    const data = await workoutsApi.getCalendar(from, to);
+    const map = {};
+    data.forEach(d => { map[d.date] = d.count; });
+    setCalendarDates(map);
+  }
+
+  async function loadDateSessions() {
+    setSessionsLoading(true);
+    const data = await workoutsApi.getByDate(viewDate);
+    setSessions(data);
     setSessionsLoading(false);
   }
 
   async function loadData() {
-    loadMonthWorkouts();
+    loadCalendar();
+    loadDateSessions();
     templatesApi.getAll().then(setTemplates);
   }
 
