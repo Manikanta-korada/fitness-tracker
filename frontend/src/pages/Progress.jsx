@@ -22,6 +22,7 @@ export default function Progress() {
   const [mealBreakdown, setMealBreakdown] = useState([]);
   const [workoutFrequency, setWorkoutFrequency] = useState([]);
   const [muscleVolume, setMuscleVolume] = useState([]);
+  const [muscleSets, setMuscleSets] = useState([]);
   const [sleepTrend, setSleepTrend] = useState([]);
   const [personalRecords, setPersonalRecords] = useState([]);
   const [healthTimeline, setHealthTimeline] = useState([]);
@@ -52,6 +53,7 @@ export default function Progress() {
     progressApi.getMealBreakdown(from, to).then(d => { setMealBreakdown(d); setLoaded(p => ({...p, mealBreakdown: true})); }).catch(() => setLoaded(p => ({...p, mealBreakdown: true})));
     progressApi.getWorkoutFrequency(from, to).then(d => { setWorkoutFrequency(d); setLoaded(p => ({...p, workoutFreq: true})); }).catch(() => setLoaded(p => ({...p, workoutFreq: true})));
     progressApi.getMuscleVolume(from, to).then(d => { setMuscleVolume(d); setLoaded(p => ({...p, muscleVol: true})); }).catch(() => setLoaded(p => ({...p, muscleVol: true})));
+    progressApi.getMuscleSets(from, to).then(d => { setMuscleSets(d); setLoaded(p => ({...p, muscleSets: true})); }).catch(() => setLoaded(p => ({...p, muscleSets: true})));
     waterApi.getTrend(weekFrom, to).then(d => { setWaterWeekly(d); setLoaded(p => ({...p, waterWeekly: true})); }).catch(() => setLoaded(p => ({...p, waterWeekly: true})));
     waterApi.getTrend(from, to).then(d => { setWaterMonthly(d); setLoaded(p => ({...p, waterMonthly: true})); }).catch(() => setLoaded(p => ({...p, waterMonthly: true})));
     progressApi.getPersonalRecords().then(d => { setPersonalRecords(d); setLoaded(p => ({...p, records: true})); }).catch(() => setLoaded(p => ({...p, records: true})));
@@ -319,6 +321,24 @@ export default function Progress() {
             </ResponsiveContainer>
           ) : (
             <p className="text-gray-400 text-sm">No workout volume data yet.</p>
+          )}
+        </div>
+
+        {/* Sets by Muscle Group */}
+        <div className="bg-white rounded-xl p-4 md:p-6 border border-gray-100 shadow-sm">
+          <h2 className="font-semibold text-gray-900 mb-4">Sets by Muscle Group (30 Days)</h2>
+          {!loaded.muscleSets ? <CardSpinner /> : muscleSets.length > 0 ? (
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={muscleSets}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="muscleGroup" tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+                <Tooltip />
+                <Bar dataKey="sets" fill="#6366f1" name="Total Sets" />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <p className="text-gray-400 text-sm">No workout data yet.</p>
           )}
         </div>
 

@@ -9,6 +9,7 @@ export default function ExerciseLibrary() {
   const [name, setName] = useState('');
   const [muscleGroup, setMuscleGroup] = useState('Chest');
   const [search, setSearch] = useState('');
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     loadExercises();
@@ -20,11 +21,16 @@ export default function ExerciseLibrary() {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    await exercisesApi.create({ name, muscleGroup });
-    setShowForm(false);
-    setName('');
-    setMuscleGroup('Chest');
-    loadExercises();
+    setSaving(true);
+    try {
+      await exercisesApi.create({ name, muscleGroup });
+      setShowForm(false);
+      setName('');
+      setMuscleGroup('Chest');
+      loadExercises();
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function handleDelete(id) {
@@ -77,8 +83,8 @@ export default function ExerciseLibrary() {
               ))}
             </select>
           </div>
-          <button type="submit" className="mt-4 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700">
-            Save Exercise
+          <button type="submit" disabled={saving} className="mt-4 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50">
+            {saving ? 'Saving...' : 'Save Exercise'}
           </button>
         </form>
       )}

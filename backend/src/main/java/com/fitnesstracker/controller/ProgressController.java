@@ -214,6 +214,33 @@ public class ProgressController {
                 .collect(Collectors.toList());
     }
 
+    @GetMapping("/muscle-sets")
+    public List<Map<String, Object>> getMuscleSets(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            HttpServletRequest request) {
+        String userId = (String) request.getAttribute("userId");
+        List<WorkoutSession> sessions = workoutSessionRepository.findByUserIdAndDateBetween(userId, from, to);
+
+        Map<String, Integer> setsByGroup = new TreeMap<>();
+        for (WorkoutSession session : sessions) {
+            for (WorkoutEntry entry : session.getEntries()) {
+                if (entry.getExercise() == null) continue;
+                String group = entry.getExercise().getMuscleGroup();
+                setsByGroup.merge(group, entry.getSets().size(), Integer::sum);
+            }
+        }
+
+        return setsByGroup.entrySet().stream()
+                .map(e -> {
+                    Map<String, Object> point = new HashMap<>();
+                    point.put("muscleGroup", e.getKey());
+                    point.put("sets", e.getValue());
+                    return point;
+                })
+                .collect(Collectors.toList());
+    }
+
     @GetMapping("/recommendations/meals")
     public List<Map<String, Object>> getMealRecommendations(HttpServletRequest request) {
         String userId = (String) request.getAttribute("userId");
