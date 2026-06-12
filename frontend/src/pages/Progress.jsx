@@ -16,6 +16,7 @@ export default function Progress() {
   const [targetProtein, setTargetProtein] = useState('');
   const [targetCarbs, setTargetCarbs] = useState('');
   const [targetFat, setTargetFat] = useState('');
+  const [targetWater, setTargetWater] = useState('');
   const [waterWeekly, setWaterWeekly] = useState([]);
   const [waterMonthly, setWaterMonthly] = useState([]);
   const [macroData, setMacroData] = useState([]);
@@ -44,7 +45,7 @@ export default function Progress() {
     exercisesApi.getAll().then(d => { setExercises(d); setLoaded(p => ({...p, exercises: true})); }).catch(() => setLoaded(p => ({...p, exercises: true})));
     targetsApi.get().then(d => {
       setTargets(d);
-      if (d) { setTargetCalories(d.calorieTarget || ''); setTargetProtein(d.proteinTargetG || ''); setTargetCarbs(d.carbsTargetG || ''); setTargetFat(d.fatTargetG || ''); }
+      if (d) { setTargetCalories(d.calorieTarget || ''); setTargetProtein(d.proteinTargetG || ''); setTargetCarbs(d.carbsTargetG || ''); setTargetFat(d.fatTargetG || ''); setTargetWater(d.waterTargetMl || ''); }
       setLoaded(p => ({...p, targets: true}));
     }).catch(() => setLoaded(p => ({...p, targets: true})));
     sleepApi.getTrend(from, to).then(d => { setSleepTrend(d); setLoaded(p => ({...p, sleep: true})); }).catch(() => setLoaded(p => ({...p, sleep: true})));
@@ -97,6 +98,7 @@ export default function Progress() {
     const prot = parseFloat(targetProtein);
     const carbs = parseFloat(targetCarbs);
     const fat = parseFloat(targetFat);
+    const water = parseInt(targetWater) || 0;
     if ([cal, prot, carbs, fat].some(v => isNaN(v) || v < 0)) return;
     setSavingTargets(true);
     try {
@@ -105,6 +107,7 @@ export default function Progress() {
         proteinTargetG: prot,
         carbsTargetG: carbs,
         fatTargetG: fat,
+        waterTargetMl: water,
       });
       setShowTargetForm(false);
       setTargets(await targetsApi.get());
@@ -136,7 +139,7 @@ export default function Progress() {
       {showTargetForm && (
         <form onSubmit={handleSaveTargets} className="bg-white rounded-xl p-4 md:p-6 border border-gray-100 shadow-sm mb-6">
           <h3 className="font-semibold text-gray-900 mb-3">Daily Targets</h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             <div>
               <label className="text-xs text-gray-500">Calories</label>
               <input type="number" value={targetCalories} onChange={(e) => setTargetCalories(e.target.value)} min="0" step="1" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
@@ -153,6 +156,10 @@ export default function Progress() {
               <label className="text-xs text-gray-500">Fat (g)</label>
               <input type="number" value={targetFat} onChange={(e) => setTargetFat(e.target.value)} min="0" step="0.1" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
             </div>
+            <div>
+              <label className="text-xs text-gray-500">Water (ml)</label>
+              <input type="number" value={targetWater} onChange={(e) => setTargetWater(e.target.value)} min="0" step="100" placeholder="3000" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+            </div>
           </div>
           <button
             type="submit"
@@ -162,6 +169,10 @@ export default function Progress() {
             {savingTargets ? 'Saving...' : 'Save Targets'}
           </button>
         </form>
+      )}
+
+      {loaded.weight && loaded.calories && weightData.length >= 2 && calorieData.length >= 7 && (
+        <TdeeCard weightData={weightData} calorieData={calorieData} />
       )}
 
       <div ref={reportRef} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -469,6 +480,66 @@ export default function Progress() {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function TdeeCard({ weightData, calorieData }) {
+  const last28Days = calorieData.slice(-28);
+  if (last28Days.length < 7) return null;
+
+  const avgCalories = Math.round(last28Days.reduce((s, d) => s + d.calories, 0) / last28Days.length);
+
+  const firstDate = last28Days[0].date;
+  const lastDate = last28Days[last28Days.length - 1].date;
+
+  const weightsInRange = weightData.filter(w => w.date >= firstDate && w.date <= lastDate);
+  if (weightsInRange.length < 2) return null;
+
+  const startWeight = weightsInRange[0].weightKg;
+  const endWeight = weightsInRange[weightsInRange.length - 1].weightKg;
+  const weightChange = endWeight - startWeight;
+
+  const days = Math.max(1, (new Date(lastDate) - new Date(firstDate)) / (1000 * 60 * 60 * 24));
+
+  const dailyWeightChange = weightChange / days;
+  const caloriesFromWeight = dailyWeightChange * 7700;
+
+  const tdee = Math.round(avgCalories - caloriesFromWeight);
+  const dailyBalance = Math.round(avgCalories - tdee);
+
+  const status = dailyBalance > 50 ? 'surplus' : dailyBalance < -50 ? 'deficit' : 'maintenance';
+  const statusColor = status === 'surplus' ? 'text-green-600' : status === 'deficit' ? 'text-red-600' : 'text-gray-600';
+  const statusLabel = status === 'surplus' ? 'Surplus' : status === 'deficit' ? 'Deficit' : 'Maintenance';
+
+  return (
+    <div className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm mb-6">
+      <h3 className="text-sm font-semibold text-gray-700 mb-3">Adaptive TDEE Estimate</h3>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div>
+          <p className="text-xs text-gray-500">Your TDEE</p>
+          <p className="text-2xl font-bold text-gray-900">{tdee}<span className="text-xs font-normal text-gray-400 ml-1">kcal</span></p>
+        </div>
+        <div>
+          <p className="text-xs text-gray-500">Avg Intake</p>
+          <p className="text-lg font-bold text-gray-900">{avgCalories}<span className="text-xs font-normal text-gray-400 ml-1">kcal</span></p>
+        </div>
+        <div>
+          <p className="text-xs text-gray-500">Daily Balance</p>
+          <p className={`text-lg font-bold ${statusColor}`}>
+            {dailyBalance > 0 ? '+' : ''}{dailyBalance}<span className="text-xs font-normal ml-1">kcal</span>
+          </p>
+          <p className={`text-xs font-medium ${statusColor}`}>{statusLabel}</p>
+        </div>
+        <div>
+          <p className="text-xs text-gray-500">Weight Change</p>
+          <p className="text-lg font-bold text-gray-900">
+            {weightChange > 0 ? '+' : ''}{weightChange.toFixed(1)}<span className="text-xs font-normal text-gray-400 ml-1">kg</span>
+          </p>
+          <p className="text-xs text-gray-400">over {Math.round(days)} days</p>
+        </div>
+      </div>
+      <p className="text-xs text-gray-400 mt-3">Based on {last28Days.length} days of calorie data + {weightsInRange.length} weight entries</p>
     </div>
   );
 }

@@ -74,6 +74,7 @@ export const progressApi = {
   getWorkoutFrequency: (from, to) => request(`/progress/workout-frequency?from=${from}&to=${to}`),
   getMuscleVolume: (from, to) => request(`/progress/muscle-volume?from=${from}&to=${to}`),
   getMuscleSets: (from, to) => request(`/progress/muscle-sets?from=${from}&to=${to}`),
+  getWeeklySummary: () => request('/progress/weekly-summary'),
   getMealRecommendations: () => request('/progress/recommendations/meals'),
   getMuscleGroupRecommendation: () => request('/progress/recommendations/muscle-group'),
   getWeeklyStreak: () => request('/progress/weekly-streak'),

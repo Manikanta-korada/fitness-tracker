@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { dietApi, mealsApi, targetsApi, waterApi, sleepApi, healthNotesApi, progressApi } from '../api/client';
+import { parseFood } from '../lib/gemini';
 import Spinner from '../components/Spinner';
 
 const MEAL_TYPES = ['Pre-Workout', 'Post-Workout', 'Breakfast', 'Lunch', 'Snacks', 'Dinner', 'Miscellaneous'];
@@ -39,6 +40,12 @@ export default function DietLog() {
   const [quickAddingIdx, setQuickAddingIdx] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
   const [saveToLibrary, setSaveToLibrary] = useState(false);
+  const [aiMode, setAiMode] = useState(true);
+  const [aiText, setAiText] = useState('');
+  const [aiParsing, setAiParsing] = useState(false);
+  const [aiResults, setAiResults] = useState(null);
+  const [aiError, setAiError] = useState('');
+  const [aiAdding, setAiAdding] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -373,18 +380,27 @@ export default function DietLog() {
           <button
             type="button"
             role="tab"
-            aria-selected={!customMode}
-            onClick={() => setCustomMode(false)}
-            className={`text-sm px-3 py-1 rounded-lg ${!customMode ? 'bg-indigo-100 text-indigo-700' : 'text-gray-500'}`}
+            aria-selected={aiMode}
+            onClick={() => { setAiMode(true); setCustomMode(false); }}
+            className={`text-sm px-3 py-1 rounded-lg ${aiMode ? 'bg-green-100 text-green-700' : 'text-gray-500'}`}
+          >
+            AI Entry
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={!customMode && !aiMode}
+            onClick={() => { setCustomMode(false); setAiMode(false); }}
+            className={`text-sm px-3 py-1 rounded-lg ${!customMode && !aiMode ? 'bg-indigo-100 text-indigo-700' : 'text-gray-500'}`}
           >
             From Library
           </button>
           <button
             type="button"
             role="tab"
-            aria-selected={customMode}
-            onClick={() => setCustomMode(true)}
-            className={`text-sm px-3 py-1 rounded-lg ${customMode ? 'bg-indigo-100 text-indigo-700' : 'text-gray-500'}`}
+            aria-selected={customMode && !aiMode}
+            onClick={() => { setCustomMode(true); setAiMode(false); }}
+            className={`text-sm px-3 py-1 rounded-lg ${customMode && !aiMode ? 'bg-indigo-100 text-indigo-700' : 'text-gray-500'}`}
           >
             Custom Entry
           </button>
@@ -410,7 +426,116 @@ export default function DietLog() {
           </div>
         </div>
 
-        {!customMode ? (
+        {aiMode ? (
+          <div className="space-y-3">
+            {aiError && (
+              <div className="bg-red-50 text-red-600 text-sm rounded-lg px-3 py-2">{aiError}</div>
+            )}
+            {aiResults === null ? (
+              <div className="space-y-3">
+                <textarea
+                  value={aiText}
+                  onChange={(e) => setAiText(e.target.value)}
+                  placeholder="Describe what you ate, e.g.: 2 eggs, 1 chapati, dal 1 bowl, curd 100g"
+                  rows={3}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none"
+                />
+                <button
+                  type="button"
+                  disabled={aiParsing || !aiText.trim()}
+                  onClick={async () => {
+                    setAiParsing(true);
+                    setAiError('');
+                    try {
+                      const results = await parseFood(aiText);
+                      setAiResults(results);
+                    } catch (err) {
+                      setAiError(err.message);
+                    } finally {
+                      setAiParsing(false);
+                    }
+                  }}
+                  className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50"
+                >
+                  {aiParsing ? 'Parsing...' : 'Parse with AI'}
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  {aiResults.map((item, idx) => (
+                    <div key={idx} className="flex items-center gap-3 bg-gray-50 rounded-lg px-3 py-2">
+                      <input
+                        type="checkbox"
+                        checked={item.selected !== false}
+                        onChange={(e) => {
+                          const updated = [...aiResults];
+                          updated[idx] = { ...updated[idx], selected: e.target.checked };
+                          setAiResults(updated);
+                        }}
+                        className="w-4 h-4 text-indigo-600 border-gray-300 rounded"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-700 truncate">{item.name}</p>
+                        <p className="text-xs text-gray-400">
+                          {item.calories} kcal | P: {item.proteinG}g | C: {item.carbsG}g | F: {item.fatG}g
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex items-center justify-between bg-indigo-50 rounded-lg px-3 py-2">
+                  <span className="text-xs font-medium text-indigo-700">
+                    Total: {aiResults.filter(i => i.selected !== false).reduce((s, i) => s + i.calories, 0)} kcal |
+                    P: {aiResults.filter(i => i.selected !== false).reduce((s, i) => s + i.proteinG, 0).toFixed(1)}g |
+                    C: {aiResults.filter(i => i.selected !== false).reduce((s, i) => s + i.carbsG, 0).toFixed(1)}g |
+                    F: {aiResults.filter(i => i.selected !== false).reduce((s, i) => s + i.fatG, 0).toFixed(1)}g
+                  </span>
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    disabled={aiAdding}
+                    onClick={async () => {
+                      setAiAdding(true);
+                      try {
+                        const selected = aiResults.filter(i => i.selected !== false);
+                        for (const item of selected) {
+                          await dietApi.create({
+                            date: selectedDate,
+                            mealType,
+                            customName: item.name,
+                            calories: item.calories,
+                            proteinG: item.proteinG,
+                            carbsG: item.carbsG,
+                            fatG: item.fatG,
+                            servings: 1,
+                          });
+                        }
+                        setAiResults(null);
+                        setAiText('');
+                        setAiError('');
+                        loadData();
+                      } finally {
+                        setAiAdding(false);
+                      }
+                    }}
+                    className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
+                  >
+                    {aiAdding ? 'Adding...' : `Add ${aiResults.filter(i => i.selected !== false).length} items`}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setAiResults(null); }}
+                    className="text-sm text-gray-500 hover:text-gray-700"
+                  >
+                    Back
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        ) : !customMode ? (
           <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
             <div className="flex-1">
               <label className="block text-xs text-gray-500 mb-1">Meal</label>
@@ -610,6 +735,38 @@ export default function DietLog() {
           <h2 className="font-semibold text-gray-900">Water Intake</h2>
         </div>
         <div className="p-4">
+          <div className="mb-4">
+            <p className="text-xs font-semibold text-gray-500 mb-2">Quick Add</p>
+            <div className="flex flex-wrap gap-2">
+              {[
+                { label: '250ml', amount: 250, type: 'Water', color: 'bg-blue-50 text-blue-700 hover:bg-blue-100' },
+                { label: '500ml', amount: 500, type: 'Water', color: 'bg-blue-50 text-blue-700 hover:bg-blue-100' },
+                { label: '750ml', amount: 750, type: 'Water', color: 'bg-blue-50 text-blue-700 hover:bg-blue-100' },
+                { label: '1L', amount: 1000, type: 'Water', color: 'bg-blue-50 text-blue-700 hover:bg-blue-100' },
+                { label: '🥥 250ml', amount: 250, type: 'Coconut Water', color: 'bg-green-50 text-green-700 hover:bg-green-100' },
+                { label: '🥥 500ml', amount: 500, type: 'Coconut Water', color: 'bg-green-50 text-green-700 hover:bg-green-100' },
+              ].map((preset) => (
+                <button
+                  key={`${preset.type}-${preset.amount}`}
+                  type="button"
+                  disabled={waterSubmitting}
+                  onClick={async () => {
+                    setWaterSubmitting(true);
+                    try {
+                      await waterApi.create({ date: selectedDate, type: preset.type, amountMl: preset.amount });
+                      loadData();
+                    } finally {
+                      setWaterSubmitting(false);
+                    }
+                  }}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium border border-gray-200 disabled:opacity-50 ${preset.color}`}
+                >
+                  {preset.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <form onSubmit={handleAddWater} className="flex flex-col sm:flex-row gap-3 sm:items-end mb-4">
             <div>
               <label className="block text-xs text-gray-500 mb-1">Type</label>

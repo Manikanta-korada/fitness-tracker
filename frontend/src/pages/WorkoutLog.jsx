@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { workoutsApi, exercisesApi, templatesApi } from '../api/client';
+import { workoutsApi, exercisesApi, templatesApi, progressApi } from '../api/client';
+import { suggestWorkout } from '../lib/gemini';
 import Spinner from '../components/Spinner';
 
 export default function WorkoutLog() {
@@ -23,6 +24,9 @@ export default function WorkoutLog() {
   const [savingTemplate, setSavingTemplate] = useState(false);
   const [applyingTemplate, setApplyingTemplate] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
+  const [aiSuggestion, setAiSuggestion] = useState(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState('');
 
   const [calendarDates, setCalendarDates] = useState({});
   const [sessions, setSessions] = useState([]);
@@ -428,6 +432,32 @@ export default function WorkoutLog() {
                   {applyingTemplate === t.id ? 'Applying...' : t.name}
                 </button>
               ))}
+              {!showForm && (
+                <button
+                  onClick={async () => {
+                    setAiLoading(true);
+                    setAiError('');
+                    try {
+                      const today = new Date().toISOString().split('T')[0];
+                      const from = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+                      const [recentSessions, muscleRec] = await Promise.all([
+                        workoutsApi.getAll(from, today),
+                        progressApi.getMuscleGroupRecommendation(),
+                      ]);
+                      const suggestion = await suggestWorkout(recentSessions, muscleRec);
+                      setAiSuggestion(suggestion);
+                    } catch (err) {
+                      setAiError(err.message);
+                    } finally {
+                      setAiLoading(false);
+                    }
+                  }}
+                  disabled={aiLoading}
+                  className="px-3 py-1.5 bg-green-50 text-green-700 rounded-lg text-xs hover:bg-green-100 disabled:opacity-50"
+                >
+                  {aiLoading ? 'Thinking...' : 'AI Suggest'}
+                </button>
+              )}
             </div>
             <button
               onClick={() => { if (showForm) { cancelForm(); } else { setWorkoutDate(viewDate); setShowForm(true); } }}
@@ -436,6 +466,33 @@ export default function WorkoutLog() {
               {showForm ? 'Cancel' : '+ New Workout'}
             </button>
           </div>
+
+          {aiError && (
+            <div className="bg-red-50 text-red-600 text-sm rounded-lg px-3 py-2 mb-4">{aiError}</div>
+          )}
+
+          {aiSuggestion && !showForm && (
+            <div className="bg-green-50 rounded-xl p-4 border border-green-100 mb-4">
+              <div className="flex justify-between items-start mb-2">
+                <div>
+                  <h3 className="font-semibold text-green-900">{aiSuggestion.name}</h3>
+                  <p className="text-xs text-green-700 mt-0.5">{aiSuggestion.reason}</p>
+                </div>
+                <button onClick={() => setAiSuggestion(null)} className="text-green-400 text-xs hover:text-green-600">Dismiss</button>
+              </div>
+              <div className="space-y-2 mt-3">
+                {aiSuggestion.exercises?.map((ex, idx) => (
+                  <div key={idx} className="bg-white rounded-lg px-3 py-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium text-gray-700">{ex.name}</span>
+                      <span className="text-xs text-gray-500">{ex.sets} × {ex.reps}</span>
+                    </div>
+                    {ex.notes && <p className="text-xs text-gray-400 mt-0.5">{ex.notes}</p>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
       {showForm && (
         <form onSubmit={handleSubmit} className="bg-white rounded-xl p-4 md:p-6 border border-gray-100 shadow-sm mb-6">

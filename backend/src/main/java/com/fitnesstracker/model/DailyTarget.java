@@ -13,6 +13,7 @@ public class DailyTarget {
     private double proteinTargetG;
     private double carbsTargetG;
     private double fatTargetG;
+    private int waterTargetMl;
 
     public DailyTarget() {}
 
@@ -26,4 +27,6 @@ public class DailyTarget {
     public void setCarbsTargetG(double carbsTargetG) { this.carbsTargetG = carbsTargetG; }
     public double getFatTargetG() { return fatTargetG; }
     public void setFatTargetG(double fatTargetG) { this.fatTargetG = fatTargetG; }
+    public int getWaterTargetMl() { return waterTargetMl; }
+    public void setWaterTargetMl(int waterTargetMl) { this.waterTargetMl = waterTargetMl; }
 }

@@ -14,6 +14,7 @@ export default function Dashboard() {
   const [muscleRec, setMuscleRec] = useState(null);
   const [weeklyStreak, setWeeklyStreak] = useState(null);
   const [healthNotes, setHealthNotes] = useState([]);
+  const [weeklySummary, setWeeklySummary] = useState(null);
   const [loading, setLoading] = useState(true);
   const today = new Date().toISOString().split('T')[0];
 
@@ -29,6 +30,7 @@ export default function Dashboard() {
       progressApi.getWeeklyStreak().then(setWeeklyStreak),
       healthNotesApi.getByDate(today).then(setHealthNotes),
       waterApi.getTrend(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], today).then(setWaterWeekly),
+      progressApi.getWeeklySummary().then(setWeeklySummary),
     ]).finally(() => setLoading(false));
   }, []);
 
@@ -44,36 +46,81 @@ export default function Dashboard() {
       <h1 className="text-2xl font-bold text-gray-900 mb-6">Dashboard</h1>
       <p className="text-gray-500 mb-8">{new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <StatCard
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
+        <ProgressRing
           label="Calories"
           value={totalCalories}
           target={targets?.calorieTarget}
           unit="kcal"
-          color="bg-orange-50 text-orange-700"
+          color="#f97316"
         />
-        <StatCard
+        <ProgressRing
           label="Protein"
-          value={totalProtein.toFixed(1)}
+          value={parseFloat(totalProtein.toFixed(1))}
           target={targets?.proteinTargetG}
           unit="g"
-          color="bg-blue-50 text-blue-700"
+          color="#3b82f6"
         />
-        <StatCard
+        <ProgressRing
           label="Carbs"
-          value={totalCarbs.toFixed(1)}
+          value={parseFloat(totalCarbs.toFixed(1))}
           target={targets?.carbsTargetG}
           unit="g"
-          color="bg-green-50 text-green-700"
+          color="#10b981"
         />
-        <StatCard
+        <ProgressRing
           label="Fat"
-          value={totalFat.toFixed(1)}
+          value={parseFloat(totalFat.toFixed(1))}
           target={targets?.fatTargetG}
           unit="g"
-          color="bg-purple-50 text-purple-700"
+          color="#8b5cf6"
+        />
+        <ProgressRing
+          label="Water"
+          value={waterLogs.reduce((s, w) => s + w.amountMl, 0)}
+          target={targets?.waterTargetMl}
+          unit="ml"
+          color="#06b6d4"
         />
       </div>
+
+      {weeklySummary && (
+        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 mb-8">
+          <h3 className="text-sm font-semibold text-gray-700 mb-3">Weekly Summary</h3>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <SummaryItem
+              label="Avg Calories"
+              value={weeklySummary.thisWeek.avgCalories}
+              prev={weeklySummary.lastWeek.avgCalories}
+              unit="kcal"
+            />
+            <SummaryItem
+              label="Avg Protein"
+              value={weeklySummary.thisWeek.avgProtein}
+              prev={weeklySummary.lastWeek.avgProtein}
+              unit="g"
+            />
+            <SummaryItem
+              label="Workouts"
+              value={weeklySummary.thisWeek.workoutDays}
+              prev={weeklySummary.lastWeek.workoutDays}
+              unit="days"
+            />
+            <SummaryItem
+              label="Avg Sleep"
+              value={weeklySummary.thisWeek.avgSleepHours}
+              prev={weeklySummary.lastWeek.avgSleepHours}
+              unit="hrs"
+            />
+            <SummaryItem
+              label="Weight"
+              value={weeklySummary.thisWeek.endWeight}
+              prev={weeklySummary.lastWeek.endWeight}
+              unit="kg"
+            />
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         {weeklyStreak && (
@@ -243,15 +290,60 @@ export default function Dashboard() {
   );
 }
 
-function StatCard({ label, value, target, unit, color }) {
+function ProgressRing({ label, value, target, unit, color }) {
+  const percentage = target ? Math.min((value / target) * 100, 100) : 0;
+  const radius = 40;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference - (percentage / 100) * circumference;
+  const isOver = target && value > target;
+
   return (
-    <div className={`rounded-xl p-5 ${color}`}>
-      <p className="text-sm font-medium opacity-75">{label}</p>
-      <p className="text-2xl font-bold mt-1">
-        {value} <span className="text-sm font-normal">{unit}</span>
+    <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex flex-col items-center">
+      <div className="relative w-24 h-24">
+        <svg className="w-24 h-24 -rotate-90" viewBox="0 0 96 96">
+          <circle
+            cx="48" cy="48" r={radius}
+            fill="none"
+            stroke="#f3f4f6"
+            strokeWidth="8"
+          />
+          <circle
+            cx="48" cy="48" r={radius}
+            fill="none"
+            stroke={isOver ? '#ef4444' : color}
+            strokeWidth="8"
+            strokeLinecap="round"
+            strokeDasharray={circumference}
+            strokeDashoffset={offset}
+            style={{ transition: 'stroke-dashoffset 0.5s ease' }}
+          />
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <span className="text-lg font-bold text-gray-900">{Math.round(percentage)}%</span>
+        </div>
+      </div>
+      <p className="text-xs font-semibold text-gray-700 mt-2">{label}</p>
+      <p className="text-xs text-gray-500">
+        {value} / {target || '—'} {unit}
       </p>
-      {target && (
-        <p className="text-xs mt-1 opacity-60">Target: {target} {unit}</p>
+    </div>
+  );
+}
+
+function SummaryItem({ label, value, prev, unit }) {
+  if (value === null || value === undefined) return null;
+  const diff = prev != null && prev !== 0 ? value - prev : null;
+  const showDiff = diff !== null && diff !== 0;
+  return (
+    <div>
+      <p className="text-xs text-gray-500">{label}</p>
+      <p className="text-lg font-bold text-gray-900">
+        {value}<span className="text-xs font-normal text-gray-400 ml-1">{unit}</span>
+      </p>
+      {showDiff && (
+        <p className={`text-xs font-medium ${diff > 0 ? 'text-green-600' : 'text-red-600'}`}>
+          {diff > 0 ? '↑' : '↓'} {Math.abs(Math.round(diff * 10) / 10)} vs last week
+        </p>
       )}
     </div>
   );

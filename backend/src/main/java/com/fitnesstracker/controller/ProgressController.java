@@ -6,6 +6,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -20,17 +21,23 @@ public class ProgressController {
     private final DietLogRepository dietLogRepository;
     private final DailyTargetRepository dailyTargetRepository;
     private final MealRepository mealRepository;
+    private final SleepLogRepository sleepLogRepository;
+    private final WaterIntakeRepository waterIntakeRepository;
 
     public ProgressController(BodyWeightRepository bodyWeightRepository,
                               WorkoutSessionRepository workoutSessionRepository,
                               DietLogRepository dietLogRepository,
                               DailyTargetRepository dailyTargetRepository,
-                              MealRepository mealRepository) {
+                              MealRepository mealRepository,
+                              SleepLogRepository sleepLogRepository,
+                              WaterIntakeRepository waterIntakeRepository) {
         this.bodyWeightRepository = bodyWeightRepository;
         this.workoutSessionRepository = workoutSessionRepository;
         this.dietLogRepository = dietLogRepository;
         this.dailyTargetRepository = dailyTargetRepository;
         this.mealRepository = mealRepository;
+        this.sleepLogRepository = sleepLogRepository;
+        this.waterIntakeRepository = waterIntakeRepository;
     }
 
     @GetMapping("/weight")
@@ -343,6 +350,56 @@ public class ProgressController {
         result.put("totalDays", 7);
         result.put("weekStart", monday);
         return result;
+    }
+
+    @GetMapping("/weekly-summary")
+    public Map<String, Object> getWeeklySummary(HttpServletRequest request) {
+        String userId = (String) request.getAttribute("userId");
+        LocalDate today = LocalDate.now();
+        LocalDate thisWeekStart = today.with(DayOfWeek.MONDAY);
+        LocalDate lastWeekStart = thisWeekStart.minusDays(7);
+        LocalDate lastWeekEnd = thisWeekStart.minusDays(1);
+
+        Map<String, Object> thisWeek = computeWeekStats(userId, thisWeekStart, today);
+        Map<String, Object> lastWeek = computeWeekStats(userId, lastWeekStart, lastWeekEnd);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("thisWeek", thisWeek);
+        result.put("lastWeek", lastWeek);
+        return result;
+    }
+
+    private Map<String, Object> computeWeekStats(String userId, LocalDate from, LocalDate to) {
+        List<DietLog> dietLogs = dietLogRepository.findByUserIdAndDateBetween(userId, from, to);
+        List<WorkoutSession> workouts = workoutSessionRepository.findByUserIdAndDateBetween(userId, from, to);
+        List<SleepLog> sleepLogs = sleepLogRepository.findByUserIdAndDateBetween(userId, from, to);
+        List<WaterIntake> waterLogs = waterIntakeRepository.findByUserIdAndDateBetween(userId, from, to);
+        List<BodyWeight> weights = bodyWeightRepository.findByUserIdAndDateBetweenOrderByDateAsc(userId, from, to);
+
+        long daysWithMeals = dietLogs.stream().map(DietLog::getDate).distinct().count();
+        int totalCalories = dietLogs.stream().mapToInt(DietLog::getCalories).sum();
+        double totalProtein = dietLogs.stream().mapToDouble(DietLog::getProteinG).sum();
+
+        long workoutCount = workouts.stream().map(WorkoutSession::getDate).distinct().count();
+
+        double avgSleepHours = sleepLogs.isEmpty() ? 0 :
+                sleepLogs.stream().mapToInt(SleepLog::getDurationMinutes).average().orElse(0) / 60.0;
+
+        int totalWaterMl = waterLogs.stream().mapToInt(WaterIntake::getAmountMl).sum();
+        long daysWithWater = waterLogs.stream().map(WaterIntake::getDate).distinct().count();
+
+        Double startWeight = weights.isEmpty() ? null : weights.get(0).getWeightKg();
+        Double endWeight = weights.isEmpty() ? null : weights.get(weights.size() - 1).getWeightKg();
+
+        Map<String, Object> stats = new HashMap<>();
+        stats.put("avgCalories", daysWithMeals > 0 ? Math.round((double) totalCalories / daysWithMeals) : 0);
+        stats.put("avgProtein", daysWithMeals > 0 ? Math.round(totalProtein / daysWithMeals * 10.0) / 10.0 : 0);
+        stats.put("workoutDays", workoutCount);
+        stats.put("avgSleepHours", Math.round(avgSleepHours * 10.0) / 10.0);
+        stats.put("avgWaterMl", daysWithWater > 0 ? Math.round((double) totalWaterMl / daysWithWater) : 0);
+        stats.put("startWeight", startWeight);
+        stats.put("endWeight", endWeight);
+        return stats;
     }
 
     @GetMapping("/personal-records")
