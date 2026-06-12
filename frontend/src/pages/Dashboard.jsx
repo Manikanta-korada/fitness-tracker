@@ -30,8 +30,8 @@ export default function Dashboard() {
       progressApi.getWeeklyStreak().then(setWeeklyStreak),
       healthNotesApi.getByDate(today).then(setHealthNotes),
       waterApi.getTrend(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], today).then(setWaterWeekly),
-      progressApi.getWeeklySummary().then(setWeeklySummary),
     ]).finally(() => setLoading(false));
+    progressApi.getWeeklySummary().then(setWeeklySummary).catch(() => {});
   }, []);
 
   const totalCalories = dietLogs.reduce((sum, l) => sum + l.calories, 0);

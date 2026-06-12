@@ -173,13 +173,15 @@ public class ProgressController {
         String userId = (String) request.getAttribute("userId");
         List<WorkoutSession> sessions = workoutSessionRepository.findByUserIdAndDateBetween(userId, from, to);
 
-        Map<String, Long> weeklyCount = new TreeMap<>();
+        Map<String, Set<LocalDate>> weeklyDays = new TreeMap<>();
         for (WorkoutSession session : sessions) {
             LocalDate date = session.getDate();
             LocalDate weekStart = date.minusDays(date.getDayOfWeek().getValue() - 1);
             String weekLabel = weekStart.toString();
-            weeklyCount.merge(weekLabel, 1L, Long::sum);
+            weeklyDays.computeIfAbsent(weekLabel, k -> new HashSet<>()).add(date);
         }
+        Map<String, Long> weeklyCount = new TreeMap<>();
+        weeklyDays.forEach((week, days) -> weeklyCount.put(week, (long) days.size()));
 
         return weeklyCount.entrySet().stream()
                 .map(e -> {
