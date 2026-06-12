@@ -128,12 +128,10 @@ export default function MealLibrary() {
           <div key={meal.id} className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
             <div className="flex justify-between items-start mb-2">
               <h3 className="font-semibold text-gray-900 text-sm">{meal.name}</h3>
-              {meal.custom && (
-                <div className="flex gap-1.5">
-                  <button onClick={() => startEdit(meal)} className="px-2 py-0.5 bg-indigo-50 text-indigo-600 text-xs font-medium rounded hover:bg-indigo-100">Edit</button>
-                  <button onClick={() => handleDelete(meal.id)} disabled={deletingId === meal.id} aria-label={`Delete ${meal.name}`} className="px-2 py-0.5 bg-red-50 text-red-500 text-xs font-medium rounded hover:bg-red-100 disabled:opacity-50">{deletingId === meal.id ? 'Deleting...' : 'Delete'}</button>
-                </div>
-              )}
+              <div className="flex gap-1.5">
+                <button onClick={() => startEdit(meal)} className="px-2 py-0.5 bg-indigo-50 text-indigo-600 text-xs font-medium rounded hover:bg-indigo-100">Edit</button>
+                <button onClick={() => handleDelete(meal.id)} disabled={deletingId === meal.id} aria-label={`Delete ${meal.name}`} className="px-2 py-0.5 bg-red-50 text-red-500 text-xs font-medium rounded hover:bg-red-100 disabled:opacity-50">{deletingId === meal.id ? 'Deleting...' : 'Delete'}</button>
+              </div>
             </div>
             <p className="text-lg font-bold text-orange-600">{meal.calories} <span className="text-xs font-normal">kcal</span></p>
             <div className="flex gap-3 mt-2 text-xs text-gray-500">
@@ -141,7 +139,6 @@ export default function MealLibrary() {
               <span>C: {meal.carbsG}g</span>
               <span>F: {meal.fatG}g</span>
             </div>
-            {!meal.custom && <span className="inline-block mt-2 text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded">Pre-built</span>}
           </div>
         ))}
       </div>

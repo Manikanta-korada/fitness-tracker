@@ -35,6 +35,7 @@ public class MealController {
     @PutMapping("/{id}")
     public Meal update(@PathVariable Long id, @RequestBody Meal meal) {
         meal.setId(id);
+        meal.setCustom(true);
         return mealRepository.save(meal);
     }
 
