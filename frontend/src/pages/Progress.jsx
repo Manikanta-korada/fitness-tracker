@@ -17,29 +17,26 @@ export default function Progress() {
   const [targetCarbs, setTargetCarbs] = useState('');
   const [targetFat, setTargetFat] = useState('');
   const [targetWater, setTargetWater] = useState('');
-  const [waterWeekly, setWaterWeekly] = useState([]);
   const [waterMonthly, setWaterMonthly] = useState([]);
   const [macroData, setMacroData] = useState([]);
-  const [mealBreakdown, setMealBreakdown] = useState([]);
   const [workoutFrequency, setWorkoutFrequency] = useState([]);
   const [muscleVolume, setMuscleVolume] = useState([]);
-  const [muscleSets, setMuscleSets] = useState([]);
   const [sleepTrend, setSleepTrend] = useState([]);
   const [personalRecords, setPersonalRecords] = useState([]);
   const [healthTimeline, setHealthTimeline] = useState([]);
   const [loaded, setLoaded] = useState({});
   const [loggingWeight, setLoggingWeight] = useState(false);
   const [savingTargets, setSavingTargets] = useState(false);
+  const [rangeDays, setRangeDays] = useState(7);
   const reportRef = useRef(null);
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [rangeDays]);
 
   async function loadData() {
     const to = new Date().toISOString().split('T')[0];
-    const from = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-    const weekFrom = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const from = new Date(Date.now() - rangeDays * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
     progressApi.getWeight().then(d => { setWeightData(d); setLoaded(p => ({...p, weight: true})); }).catch(() => setLoaded(p => ({...p, weight: true})));
     exercisesApi.getAll().then(d => { setExercises(d); setLoaded(p => ({...p, exercises: true})); }).catch(() => setLoaded(p => ({...p, exercises: true})));
@@ -51,11 +48,8 @@ export default function Progress() {
     sleepApi.getTrend(from, to).then(d => { setSleepTrend(d); setLoaded(p => ({...p, sleep: true})); }).catch(() => setLoaded(p => ({...p, sleep: true})));
     progressApi.getCalories(from, to).then(d => { setCalorieData(d); setLoaded(p => ({...p, calories: true})); }).catch(() => setLoaded(p => ({...p, calories: true})));
     progressApi.getMacros(from, to).then(d => { setMacroData(d); setLoaded(p => ({...p, macros: true})); }).catch(() => setLoaded(p => ({...p, macros: true})));
-    progressApi.getMealBreakdown(from, to).then(d => { setMealBreakdown(d); setLoaded(p => ({...p, mealBreakdown: true})); }).catch(() => setLoaded(p => ({...p, mealBreakdown: true})));
     progressApi.getWorkoutFrequency(from, to).then(d => { setWorkoutFrequency(d); setLoaded(p => ({...p, workoutFreq: true})); }).catch(() => setLoaded(p => ({...p, workoutFreq: true})));
     progressApi.getMuscleVolume(from, to).then(d => { setMuscleVolume(d); setLoaded(p => ({...p, muscleVol: true})); }).catch(() => setLoaded(p => ({...p, muscleVol: true})));
-    progressApi.getMuscleSets(from, to).then(d => { setMuscleSets(d); setLoaded(p => ({...p, muscleSets: true})); }).catch(() => setLoaded(p => ({...p, muscleSets: true})));
-    waterApi.getTrend(weekFrom, to).then(d => { setWaterWeekly(d); setLoaded(p => ({...p, waterWeekly: true})); }).catch(() => setLoaded(p => ({...p, waterWeekly: true})));
     waterApi.getTrend(from, to).then(d => { setWaterMonthly(d); setLoaded(p => ({...p, waterMonthly: true})); }).catch(() => setLoaded(p => ({...p, waterMonthly: true})));
     progressApi.getPersonalRecords().then(d => { setPersonalRecords(d); setLoaded(p => ({...p, records: true})); }).catch(() => setLoaded(p => ({...p, records: true})));
     healthNotesApi.getTrend(from, to).then(d => { setHealthTimeline(d); setLoaded(p => ({...p, health: true})); }).catch(() => setLoaded(p => ({...p, health: true})));
@@ -120,7 +114,21 @@ export default function Progress() {
     <div>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <h1 className="text-xl md:text-2xl font-bold text-gray-900">Progress</h1>
-        <div className="flex gap-3">
+        <div className="flex gap-3 items-center">
+          <div className="flex bg-gray-100 rounded-lg p-0.5">
+            <button
+              onClick={() => setRangeDays(7)}
+              className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${rangeDays === 7 ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-500'}`}
+            >
+              7 Days
+            </button>
+            <button
+              onClick={() => setRangeDays(30)}
+              className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${rangeDays === 30 ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-500'}`}
+            >
+              30 Days
+            </button>
+          </div>
           <button
             onClick={handleExportPDF}
             className="text-sm text-white bg-indigo-600 px-3 py-1.5 rounded-lg font-medium hover:bg-indigo-700"
@@ -226,7 +234,7 @@ export default function Progress() {
 
         {/* Sleep Duration Trend */}
         <div className="bg-white rounded-xl p-4 md:p-6 border border-gray-100 shadow-sm">
-          <h2 className="font-semibold text-gray-900 mb-4">Sleep Duration (30 Days)</h2>
+          <h2 className="font-semibold text-gray-900 mb-4">Sleep Duration ({rangeDays} Days)</h2>
           {!loaded.sleep ? <CardSpinner /> : sleepTrend.length > 0 ? (
             <ResponsiveContainer width="100%" height={200}>
               <LineChart data={sleepTrend}>
@@ -244,7 +252,7 @@ export default function Progress() {
 
         {/* Calorie Trend Chart */}
         <div className="bg-white rounded-xl p-4 md:p-6 border border-gray-100 shadow-sm">
-          <h2 className="font-semibold text-gray-900 mb-4">Calorie Trend (30 days)</h2>
+          <h2 className="font-semibold text-gray-900 mb-4">Calorie Trend ({rangeDays} Days)</h2>
           {!loaded.calories ? <CardSpinner /> : calorieData.length > 0 ? (
             <ResponsiveContainer width="100%" height={200}>
               <LineChart data={calorieData}>
@@ -260,9 +268,9 @@ export default function Progress() {
           )}
         </div>
 
-        {/* Macros Trend (30 days) */}
+        {/* Macros Trend */}
         <div className="bg-white rounded-xl p-4 md:p-6 border border-gray-100 shadow-sm">
-          <h2 className="font-semibold text-gray-900 mb-4">Macros Trend (30 Days)</h2>
+          <h2 className="font-semibold text-gray-900 mb-4">Macros Trend ({rangeDays} Days)</h2>
           {!loaded.macros ? <CardSpinner /> : macroData.length > 0 ? (
             <ResponsiveContainer width="100%" height={200}>
               <LineChart data={macroData}>
@@ -278,24 +286,6 @@ export default function Progress() {
             </ResponsiveContainer>
           ) : (
             <p className="text-gray-400 text-sm">No macro data yet.</p>
-          )}
-        </div>
-
-        {/* Meal Type Calorie Breakdown */}
-        <div className="bg-white rounded-xl p-4 md:p-6 border border-gray-100 shadow-sm">
-          <h2 className="font-semibold text-gray-900 mb-4">Calories by Meal Type (30 Days)</h2>
-          {!loaded.mealBreakdown ? <CardSpinner /> : mealBreakdown.length > 0 ? (
-            <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={mealBreakdown}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="mealType" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 11 }} unit=" kcal" />
-                <Tooltip />
-                <Bar dataKey="calories" fill="#f97316" name="Calories (kcal)" />
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <p className="text-gray-400 text-sm">No meal data yet.</p>
           )}
         </div>
 
@@ -319,7 +309,7 @@ export default function Progress() {
 
         {/* Muscle Group Volume */}
         <div className="bg-white rounded-xl p-4 md:p-6 border border-gray-100 shadow-sm">
-          <h2 className="font-semibold text-gray-900 mb-4">Volume by Muscle Group (30 Days)</h2>
+          <h2 className="font-semibold text-gray-900 mb-4">Volume by Muscle Group ({rangeDays} Days)</h2>
           {!loaded.muscleVol ? <CardSpinner /> : muscleVolume.length > 0 ? (
             <ResponsiveContainer width="100%" height={200}>
               <BarChart data={muscleVolume}>
@@ -335,47 +325,10 @@ export default function Progress() {
           )}
         </div>
 
-        {/* Sets by Muscle Group */}
-        <div className="bg-white rounded-xl p-4 md:p-6 border border-gray-100 shadow-sm">
-          <h2 className="font-semibold text-gray-900 mb-4">Sets by Muscle Group (30 Days)</h2>
-          {!loaded.muscleSets ? <CardSpinner /> : muscleSets.length > 0 ? (
-            <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={muscleSets}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="muscleGroup" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
-                <Tooltip />
-                <Bar dataKey="sets" fill="#6366f1" name="Total Sets" />
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <p className="text-gray-400 text-sm">No workout data yet.</p>
-          )}
-        </div>
-
-        {/* Water Intake - Weekly Bar Chart */}
-        <div className="bg-white rounded-xl p-4 md:p-6 border border-gray-100 shadow-sm">
-          <h2 className="font-semibold text-gray-900 mb-4">Water Intake (Last 7 Days)</h2>
-          {!loaded.waterWeekly ? <CardSpinner /> : waterWeekly.length > 0 ? (
-            <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={waterWeekly}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 11 }} unit="ml" />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="water" fill="#3b82f6" name="Water (ml)" />
-                <Bar dataKey="coconutWater" fill="#10b981" name="Coconut Water (ml)" />
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <p className="text-gray-400 text-sm">No water data yet.</p>
-          )}
-        </div>
 
         {/* Water Intake - Monthly Trend */}
         <div className="bg-white rounded-xl p-4 md:p-6 border border-gray-100 shadow-sm">
-          <h2 className="font-semibold text-gray-900 mb-4">Water Intake Trend (30 Days)</h2>
+          <h2 className="font-semibold text-gray-900 mb-4">Water Intake Trend ({rangeDays} Days)</h2>
           {!loaded.waterMonthly ? <CardSpinner /> : waterMonthly.length > 0 ? (
             <ResponsiveContainer width="100%" height={200}>
               <LineChart data={waterMonthly}>
@@ -459,7 +412,7 @@ export default function Progress() {
         {/* Health Timeline */}
         {(loaded.health && healthTimeline.length > 0) && (
           <div className="bg-white rounded-xl p-4 md:p-6 border border-gray-100 shadow-sm lg:col-span-2">
-            <h2 className="font-semibold text-gray-900 mb-4">Health Timeline (30 Days)</h2>
+            <h2 className="font-semibold text-gray-900 mb-4">Health Timeline ({rangeDays} Days)</h2>
             <div className="space-y-3">
               {healthTimeline.map((n) => (
                 <div key={n.id} className={`rounded-lg px-4 py-3 flex items-start gap-3 ${
