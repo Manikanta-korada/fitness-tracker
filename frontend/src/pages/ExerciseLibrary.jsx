@@ -10,6 +10,7 @@ export default function ExerciseLibrary() {
   const [muscleGroup, setMuscleGroup] = useState('Chest');
   const [search, setSearch] = useState('');
   const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
 
   useEffect(() => {
     loadExercises();
@@ -34,8 +35,13 @@ export default function ExerciseLibrary() {
   }
 
   async function handleDelete(id) {
-    await exercisesApi.delete(id);
-    loadExercises();
+    setDeletingId(id);
+    try {
+      await exercisesApi.delete(id);
+      loadExercises();
+    } finally {
+      setDeletingId(null);
+    }
   }
 
   const filtered = exercises.filter((ex) =>
@@ -109,7 +115,7 @@ export default function ExerciseLibrary() {
                   <span className="inline-block mt-1 text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded">{ex.muscleGroup}</span>
                 </div>
                 {ex.custom ? (
-                  <button onClick={() => handleDelete(ex.id)} aria-label={`Delete ${ex.name}`} className="text-red-400 text-xs hover:text-red-600">Delete</button>
+                  <button onClick={() => handleDelete(ex.id)} disabled={deletingId === ex.id} aria-label={`Delete ${ex.name}`} className="text-red-400 text-xs hover:text-red-600 disabled:opacity-50">{deletingId === ex.id ? 'Deleting...' : 'Delete'}</button>
                 ) : (
                   <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded">Pre-built</span>
                 )}

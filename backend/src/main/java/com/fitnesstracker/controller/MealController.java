@@ -1,7 +1,10 @@
 package com.fitnesstracker.controller;
 
+import com.fitnesstracker.model.DietLog;
 import com.fitnesstracker.model.Meal;
+import com.fitnesstracker.repository.DietLogRepository;
 import com.fitnesstracker.repository.MealRepository;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -11,9 +14,11 @@ import java.util.List;
 public class MealController {
 
     private final MealRepository mealRepository;
+    private final DietLogRepository dietLogRepository;
 
-    public MealController(MealRepository mealRepository) {
+    public MealController(MealRepository mealRepository, DietLogRepository dietLogRepository) {
         this.mealRepository = mealRepository;
+        this.dietLogRepository = dietLogRepository;
     }
 
     @GetMapping
@@ -33,8 +38,18 @@ public class MealController {
         return mealRepository.save(meal);
     }
 
+    @Transactional
     @DeleteMapping("/{id}")
     public void delete(@PathVariable Long id) {
+        List<DietLog> refs = dietLogRepository.findByMealId(id);
+        for (DietLog log : refs) {
+            Meal meal = log.getMeal();
+            if (meal != null && log.getCustomName() == null) {
+                log.setCustomName(meal.getName());
+            }
+            log.setMeal(null);
+        }
+        dietLogRepository.saveAll(refs);
         mealRepository.deleteById(id);
     }
 }

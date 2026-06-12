@@ -7,6 +7,8 @@ export default function WorkoutTemplates() {
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState('');
   const [entries, setEntries] = useState([]);
+  const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
 
   useEffect(() => {
     loadData();
@@ -63,16 +65,26 @@ export default function WorkoutTemplates() {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    await templatesApi.create({ name, entries });
-    setShowForm(false);
-    setName('');
-    setEntries([]);
-    loadData();
+    setSaving(true);
+    try {
+      await templatesApi.create({ name, entries });
+      setShowForm(false);
+      setName('');
+      setEntries([]);
+      loadData();
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function handleDelete(id) {
-    await templatesApi.delete(id);
-    loadData();
+    setDeletingId(id);
+    try {
+      await templatesApi.delete(id);
+      loadData();
+    } finally {
+      setDeletingId(null);
+    }
   }
 
   return (
@@ -156,7 +168,7 @@ export default function WorkoutTemplates() {
 
           <div className="flex gap-3 mt-4">
             <button type="button" onClick={addEntry} className="text-indigo-600 text-sm font-medium">+ Add Exercise</button>
-            <button type="submit" className="ml-auto bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700">Save Template</button>
+            <button type="submit" disabled={saving} className="ml-auto bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50">{saving ? 'Saving...' : 'Save Template'}</button>
           </div>
         </form>
       )}
@@ -166,7 +178,7 @@ export default function WorkoutTemplates() {
           <div key={template.id} className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
             <div className="flex justify-between items-start">
               <h3 className="font-semibold text-gray-900">{template.name}</h3>
-              <button onClick={() => handleDelete(template.id)} className="text-red-400 text-xs hover:text-red-600">Delete</button>
+              <button onClick={() => handleDelete(template.id)} disabled={deletingId === template.id} className="text-red-400 text-xs hover:text-red-600 disabled:opacity-50">{deletingId === template.id ? 'Deleting...' : 'Delete'}</button>
             </div>
             {template.entries && template.entries.length > 0 && (
               <div className="mt-3 space-y-2">

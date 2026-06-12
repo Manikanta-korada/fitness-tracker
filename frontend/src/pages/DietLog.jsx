@@ -38,6 +38,7 @@ export default function DietLog() {
   const [copyingYesterday, setCopyingYesterday] = useState(false);
   const [quickAddingIdx, setQuickAddingIdx] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
+  const [saveToLibrary, setSaveToLibrary] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -128,21 +129,22 @@ export default function DietLog() {
     setSubmitting(true);
     try {
       if (customMode) {
-        await dietApi.create({
-          date: selectedDate,
-          mealType,
-          customName: customName.trim(),
-          calories: parseInt(customCalories),
-          proteinG: parseFloat(customProtein),
-          carbsG: parseFloat(customCarbs),
-          fatG: parseFloat(customFat),
-          servings: 1,
-        });
+        const cal = parseInt(customCalories);
+        const prot = parseFloat(customProtein);
+        const carb = parseFloat(customCarbs);
+        const f = parseFloat(customFat);
+        if (saveToLibrary) {
+          const created = await mealsApi.create({ name: customName.trim(), calories: cal, proteinG: prot, carbsG: carb, fatG: f });
+          await dietApi.create({ date: selectedDate, mealType, meal: { id: created.id }, servings: 1 });
+        } else {
+          await dietApi.create({ date: selectedDate, mealType, customName: customName.trim(), calories: cal, proteinG: prot, carbsG: carb, fatG: f, servings: 1 });
+        }
         setCustomName('');
         setCustomCalories('');
         setCustomProtein('');
         setCustomCarbs('');
         setCustomFat('');
+        setSaveToLibrary(false);
       } else {
         await dietApi.create({
           date: selectedDate,
@@ -472,6 +474,17 @@ export default function DietLog() {
                 <label className="block text-xs text-gray-500 mb-1">Fat (g)</label>
                 <input type="number" value={customFat} onChange={(e) => setCustomFat(e.target.value)} placeholder="0" min="0" step="0.1" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" required />
               </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={saveToLibrary}
+                  onChange={(e) => setSaveToLibrary(e.target.checked)}
+                  className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                />
+                <span className="text-xs text-gray-600">Save to Meal Library</span>
+              </label>
             </div>
             <button
               type="submit"

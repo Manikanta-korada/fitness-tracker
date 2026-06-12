@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { mealsApi } from '../api/client';
 
 export default function MealLibrary() {
@@ -10,6 +10,10 @@ export default function MealLibrary() {
   const [protein, setProtein] = useState('');
   const [carbs, setCarbs] = useState('');
   const [fat, setFat] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
+  const [editingId, setEditingId] = useState(null);
+  const formRef = useRef(null);
 
   useEffect(() => {
     loadMeals();
@@ -19,6 +23,27 @@ export default function MealLibrary() {
     setMeals(await mealsApi.getAll());
   }
 
+  function startEdit(meal) {
+    setEditingId(meal.id);
+    setName(meal.name);
+    setCalories(String(meal.calories));
+    setProtein(String(meal.proteinG));
+    setCarbs(String(meal.carbsG));
+    setFat(String(meal.fatG));
+    setShowForm(true);
+    setTimeout(() => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+  }
+
+  function resetForm() {
+    setShowForm(false);
+    setEditingId(null);
+    setName('');
+    setCalories('');
+    setProtein('');
+    setCarbs('');
+    setFat('');
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     const cal = parseInt(calories);
@@ -26,25 +51,29 @@ export default function MealLibrary() {
     const c = parseFloat(carbs);
     const f = parseFloat(fat);
     if (!name.trim() || [cal, prot, c, f].some(v => isNaN(v) || v < 0)) return;
-    await mealsApi.create({
-      name: name.trim(),
-      calories: cal,
-      proteinG: prot,
-      carbsG: c,
-      fatG: f,
-    });
-    setShowForm(false);
-    setName('');
-    setCalories('');
-    setProtein('');
-    setCarbs('');
-    setFat('');
-    loadMeals();
+    setSaving(true);
+    try {
+      const payload = { name: name.trim(), calories: cal, proteinG: prot, carbsG: c, fatG: f };
+      if (editingId) {
+        await mealsApi.update(editingId, payload);
+      } else {
+        await mealsApi.create(payload);
+      }
+      resetForm();
+      loadMeals();
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function handleDelete(id) {
-    await mealsApi.delete(id);
-    loadMeals();
+    setDeletingId(id);
+    try {
+      await mealsApi.delete(id);
+      loadMeals();
+    } finally {
+      setDeletingId(null);
+    }
   }
 
   return (
@@ -52,7 +81,7 @@ export default function MealLibrary() {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Meal Library</h1>
         <button
-          onClick={() => setShowForm(!showForm)}
+          onClick={() => showForm ? resetForm() : setShowForm(true)}
           className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700"
         >
           {showForm ? 'Cancel' : '+ Add Meal'}
@@ -60,7 +89,8 @@ export default function MealLibrary() {
       </div>
 
       {showForm && (
-        <form onSubmit={handleSubmit} className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm mb-6">
+        <form ref={formRef} onSubmit={handleSubmit} className={`bg-white rounded-xl p-6 border shadow-sm mb-6 ${editingId ? 'border-indigo-200 ring-1 ring-indigo-100' : 'border-gray-100'}`}>
+          {editingId && <p className="text-sm font-semibold text-indigo-600 mb-3">Editing Meal</p>}
           <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Meal name" className="w-full border border-gray-200 rounded-lg px-3 py-2 mb-3 text-sm" required />
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <div>
@@ -80,7 +110,7 @@ export default function MealLibrary() {
               <input type="number" value={fat} onChange={(e) => setFat(e.target.value)} placeholder="0" min="0" step="0.1" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" required />
             </div>
           </div>
-          <button type="submit" className="mt-4 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700">Save Meal</button>
+          <button type="submit" disabled={saving} className="mt-4 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50">{saving ? 'Saving...' : editingId ? 'Update Meal' : 'Save Meal'}</button>
         </form>
       )}
 
@@ -99,7 +129,10 @@ export default function MealLibrary() {
             <div className="flex justify-between items-start mb-2">
               <h3 className="font-semibold text-gray-900 text-sm">{meal.name}</h3>
               {meal.custom && (
-                <button onClick={() => handleDelete(meal.id)} aria-label={`Delete ${meal.name}`} className="text-red-400 text-xs hover:text-red-600">Delete</button>
+                <div className="flex gap-1.5">
+                  <button onClick={() => startEdit(meal)} className="px-2 py-0.5 bg-indigo-50 text-indigo-600 text-xs font-medium rounded hover:bg-indigo-100">Edit</button>
+                  <button onClick={() => handleDelete(meal.id)} disabled={deletingId === meal.id} aria-label={`Delete ${meal.name}`} className="px-2 py-0.5 bg-red-50 text-red-500 text-xs font-medium rounded hover:bg-red-100 disabled:opacity-50">{deletingId === meal.id ? 'Deleting...' : 'Delete'}</button>
+                </div>
               )}
             </div>
             <p className="text-lg font-bold text-orange-600">{meal.calories} <span className="text-xs font-normal">kcal</span></p>
