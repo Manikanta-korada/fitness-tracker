@@ -390,8 +390,8 @@ public class ProgressController {
         int totalWaterMl = waterLogs.stream().mapToInt(WaterIntake::getAmountMl).sum();
         long daysWithWater = waterLogs.stream().map(WaterIntake::getDate).distinct().count();
 
-        Double startWeight = weights.isEmpty() ? null : weights.get(0).getWeightKg();
-        Double endWeight = weights.isEmpty() ? null : weights.get(weights.size() - 1).getWeightKg();
+        Double avgWeight = weights.isEmpty() ? null :
+                Math.round(weights.stream().mapToDouble(BodyWeight::getWeightKg).average().orElse(0) * 10.0) / 10.0;
 
         Map<String, Object> stats = new HashMap<>();
         stats.put("avgCalories", daysWithMeals > 0 ? Math.round((double) totalCalories / daysWithMeals) : 0);
@@ -399,8 +399,7 @@ public class ProgressController {
         stats.put("workoutDays", workoutCount);
         stats.put("avgSleepHours", Math.round(avgSleepHours * 10.0) / 10.0);
         stats.put("avgWaterMl", daysWithWater > 0 ? Math.round((double) totalWaterMl / daysWithWater) : 0);
-        stats.put("startWeight", startWeight);
-        stats.put("endWeight", endWeight);
+        stats.put("avgWeight", avgWeight);
         return stats;
     }
 

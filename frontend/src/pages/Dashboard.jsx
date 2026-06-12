@@ -113,9 +113,9 @@ export default function Dashboard() {
               unit="hrs"
             />
             <SummaryItem
-              label="Weight"
-              value={weeklySummary.thisWeek.endWeight}
-              prev={weeklySummary.lastWeek.endWeight}
+              label="Avg Weight"
+              value={weeklySummary.thisWeek.avgWeight}
+              prev={weeklySummary.lastWeek.avgWeight}
               unit="kg"
             />
           </div>
