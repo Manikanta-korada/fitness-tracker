@@ -244,6 +244,7 @@ public class DataSeeder implements CommandLineRunner {
         target.setProteinTargetG(150);
         target.setCarbsTargetG(300);
         target.setFatTargetG(70);
+        target.setWaterTargetMl(3000);
         targetRepository.save(target);
     }
 }

@@ -13,7 +13,8 @@ public class DailyTarget {
     private double proteinTargetG;
     private double carbsTargetG;
     private double fatTargetG;
-    private int waterTargetMl;
+    @Column(columnDefinition = "integer default 0")
+    private Integer waterTargetMl = 0;
 
     public DailyTarget() {}
 
@@ -27,6 +28,6 @@ public class DailyTarget {
     public void setCarbsTargetG(double carbsTargetG) { this.carbsTargetG = carbsTargetG; }
     public double getFatTargetG() { return fatTargetG; }
     public void setFatTargetG(double fatTargetG) { this.fatTargetG = fatTargetG; }
-    public int getWaterTargetMl() { return waterTargetMl; }
+    public int getWaterTargetMl() { return waterTargetMl != null ? waterTargetMl : 0; }
     public void setWaterTargetMl(int waterTargetMl) { this.waterTargetMl = waterTargetMl; }
 }
