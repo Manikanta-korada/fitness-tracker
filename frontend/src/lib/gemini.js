@@ -152,7 +152,7 @@ Keep it to 4-6 exercises. Use realistic sets/reps. Notes should be brief tips.`;
       'Authorization': `Bearer ${API_KEY}`,
     },
     body: JSON.stringify({
-      model: 'llama-3.3-70b-versatile',
+      model: 'llama-3.1-8b-instant',
       messages: [
         { role: 'system', content: 'You are a knowledgeable fitness coach. Return only valid JSON.' },
         { role: 'user', content: prompt },

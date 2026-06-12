@@ -354,7 +354,7 @@ function TrainNextCard({ muscleRec }) {
     setLoading(true);
     try {
       const today = new Date().toISOString().split('T')[0];
-      const from = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      const from = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
       const recentSessions = await workoutsApi.getAll(from, today);
       const result = await suggestWorkout(recentSessions, muscleRec);
       setSuggestion(result);
