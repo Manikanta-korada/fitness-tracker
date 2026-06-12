@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { dietApi, workoutsApi, targetsApi, waterApi, sleepApi, progressApi, healthNotesApi } from '../api/client';
+import { suggestWorkout } from '../lib/gemini';
 import Spinner from '../components/Spinner';
 
 export default function Dashboard() {
@@ -136,11 +137,7 @@ export default function Dashboard() {
         )}
 
         {muscleRec && muscleRec.muscleGroup && (
-          <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
-            <h3 className="text-sm font-semibold text-gray-700 mb-2">Train Next</h3>
-            <p className="text-lg font-bold text-orange-600">{muscleRec.muscleGroup}</p>
-            <p className="text-xs text-gray-500 mt-1">Not trained in {muscleRec.daysSinceLastTrained} days</p>
-          </div>
+          <TrainNextCard muscleRec={muscleRec} />
         )}
 
         {mealRecs.length > 0 && (
@@ -344,6 +341,55 @@ function SummaryItem({ label, value, prev, unit }) {
         <p className={`text-xs font-medium ${diff > 0 ? 'text-green-600' : 'text-red-600'}`}>
           {diff > 0 ? '↑' : '↓'} {Math.abs(Math.round(diff * 10) / 10)} vs last week
         </p>
+      )}
+    </div>
+  );
+}
+
+function TrainNextCard({ muscleRec }) {
+  const [suggestion, setSuggestion] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  async function handleSuggest() {
+    setLoading(true);
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const from = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      const recentSessions = await workoutsApi.getAll(from, today);
+      const result = await suggestWorkout(recentSessions, muscleRec);
+      setSuggestion(result);
+    } catch {
+      setSuggestion(null);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+      <h3 className="text-sm font-semibold text-gray-700 mb-2">Train Next</h3>
+      <p className="text-lg font-bold text-orange-600">{muscleRec.muscleGroup}</p>
+      <p className="text-xs text-gray-500 mt-1">Not trained in {muscleRec.daysSinceLastTrained} days</p>
+      {!suggestion && (
+        <button
+          onClick={handleSuggest}
+          disabled={loading}
+          className="mt-3 px-3 py-1.5 bg-green-50 text-green-700 rounded-lg text-xs font-medium hover:bg-green-100 disabled:opacity-50"
+        >
+          {loading ? 'Thinking...' : 'AI Suggest Workout'}
+        </button>
+      )}
+      {suggestion && (
+        <div className="mt-3 space-y-1.5">
+          <p className="text-xs font-semibold text-gray-600">{suggestion.name}</p>
+          {suggestion.exercises?.slice(0, 5).map((ex, idx) => (
+            <div key={idx} className="flex justify-between text-xs">
+              <span className="text-gray-700">{ex.name}</span>
+              <span className="text-gray-400">{ex.sets}×{ex.reps}</span>
+            </div>
+          ))}
+          <button onClick={() => setSuggestion(null)} className="text-xs text-gray-400 hover:text-gray-600 mt-1">Dismiss</button>
+        </div>
       )}
     </div>
   );
