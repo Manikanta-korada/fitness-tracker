@@ -35,6 +35,7 @@ export default function Progress() {
   }, [rangeDays]);
 
   async function loadData() {
+    setLoaded({});
     const to = new Date().toISOString().split('T')[0];
     const from = new Date(Date.now() - rangeDays * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
