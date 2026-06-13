@@ -294,10 +294,26 @@ export default function Progress() {
             <ResponsiveContainer width="100%" height={200}>
               <BarChart data={workoutFrequency}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="week" tick={{ fontSize: 11 }} />
+                <XAxis
+                  dataKey="week"
+                  tick={{ fontSize: 10 }}
+                  tickFormatter={(val) => {
+                    const start = new Date(val + 'T00:00:00');
+                    const end = new Date(start);
+                    end.setDate(end.getDate() + 6);
+                    const fmt = { month: 'short', day: 'numeric' };
+                    return `${start.toLocaleDateString('en-US', fmt)} - ${end.toLocaleDateString('en-US', fmt)}`;
+                  }}
+                />
                 <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
-                <Tooltip />
-                <Bar dataKey="workouts" fill="#6366f1" name="Workouts" />
+                <Tooltip labelFormatter={(val) => {
+                  const start = new Date(val + 'T00:00:00');
+                  const end = new Date(start);
+                  end.setDate(end.getDate() + 6);
+                  const fmt = { month: 'short', day: 'numeric' };
+                  return `${start.toLocaleDateString('en-US', fmt)} - ${end.toLocaleDateString('en-US', fmt)}`;
+                }} />
+                <Bar dataKey="workouts" fill="#6366f1" name="Days Trained" />
               </BarChart>
             </ResponsiveContainer>
           ) : (
