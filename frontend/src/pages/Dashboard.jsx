@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { dietApi, workoutsApi, targetsApi, waterApi, sleepApi, progressApi, healthNotesApi } from '../api/client';
-import { suggestWorkout } from '../lib/gemini';
+import { suggestWorkout, generateCoachSummary } from '../lib/gemini';
+import { getDailyQuote } from '../lib/quotes';
 import Spinner from '../components/Spinner';
 
 export default function Dashboard() {
@@ -15,6 +16,8 @@ export default function Dashboard() {
   const [muscleRec, setMuscleRec] = useState(null);
   const [weeklyStreak, setWeeklyStreak] = useState(null);
   const [streak, setStreak] = useState(null);
+  const [coachSummary, setCoachSummary] = useState(null);
+  const [coachLoading, setCoachLoading] = useState(false);
   const [healthNotes, setHealthNotes] = useState([]);
   const [weeklySummary, setWeeklySummary] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -46,8 +49,9 @@ export default function Dashboard() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Dashboard</h1>
-      <p className="text-gray-500 mb-8">{new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+      <h1 className="text-2xl font-bold text-gray-900 mb-1">Dashboard</h1>
+      <p className="text-gray-500 mb-2">{new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+      <p className="text-sm italic text-gray-400 mb-8">"{getDailyQuote().text}" — <span className="not-italic">{getDailyQuote().author}</span></p>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
         <ProgressRing
@@ -122,6 +126,38 @@ export default function Dashboard() {
               unit="kg"
             />
           </div>
+          {!coachSummary && (
+            <button
+              onClick={async () => {
+                setCoachLoading(true);
+                try {
+                  const summary = await generateCoachSummary(weeklySummary, streak);
+                  setCoachSummary(summary);
+                } catch {}
+                setCoachLoading(false);
+              }}
+              disabled={coachLoading}
+              className="mt-4 px-3 py-1.5 bg-indigo-50 text-indigo-700 rounded-lg text-xs font-medium hover:bg-indigo-100 disabled:opacity-50"
+            >
+              {coachLoading ? 'Analyzing...' : 'Get AI Coach Feedback'}
+            </button>
+          )}
+          {coachSummary && (
+            <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="bg-green-50 rounded-lg px-3 py-2">
+                <p className="text-xs font-semibold text-green-700 mb-1">What went well</p>
+                <p className="text-xs text-green-600">{coachSummary.highlight}</p>
+              </div>
+              <div className="bg-orange-50 rounded-lg px-3 py-2">
+                <p className="text-xs font-semibold text-orange-700 mb-1">To improve</p>
+                <p className="text-xs text-orange-600">{coachSummary.improve}</p>
+              </div>
+              <div className="bg-blue-50 rounded-lg px-3 py-2">
+                <p className="text-xs font-semibold text-blue-700 mb-1">Tip for next week</p>
+                <p className="text-xs text-blue-600">{coachSummary.tip}</p>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

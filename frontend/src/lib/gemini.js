@@ -185,3 +185,59 @@ Keep it to 4-6 exercises. Use realistic sets/reps. Notes should be brief tips.`;
 
   return JSON.parse(content);
 }
+
+export async function generateCoachSummary(weeklySummary, streak) {
+  if (!API_KEY) throw new Error('API key not configured.');
+
+  const prompt = `You are a friendly fitness coach giving a brief weekly check-in. Based on this data, give a short personalized summary.
+
+This week's stats:
+- Avg Calories: ${weeklySummary.thisWeek.avgCalories} kcal/day
+- Avg Protein: ${weeklySummary.thisWeek.avgProtein}g/day
+- Workout days: ${weeklySummary.thisWeek.workoutDays}
+- Avg Sleep: ${weeklySummary.thisWeek.avgSleepHours} hrs
+- Avg Weight: ${weeklySummary.thisWeek.avgWeight || 'not logged'} kg
+
+Last week's stats:
+- Avg Calories: ${weeklySummary.lastWeek.avgCalories} kcal/day
+- Avg Protein: ${weeklySummary.lastWeek.avgProtein}g/day
+- Workout days: ${weeklySummary.lastWeek.workoutDays}
+- Avg Sleep: ${weeklySummary.lastWeek.avgSleepHours} hrs
+
+Current streak: ${streak?.currentStreak || 0} days
+
+Return a JSON object with:
+- highlight: one thing that went well (1 sentence)
+- improve: one thing to work on (1 sentence)
+- tip: one actionable tip for next week (1 sentence)
+
+Keep it casual, motivating, and specific to the data. No generic advice.`;
+
+  const response = await fetchWithRetry('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${API_KEY}`,
+    },
+    body: JSON.stringify({
+      model: 'llama-3.1-8b-instant',
+      messages: [
+        { role: 'system', content: 'You are a supportive fitness coach. Return only valid JSON.' },
+        { role: 'user', content: prompt },
+      ],
+      temperature: 0.4,
+      response_format: { type: 'json_object' },
+    }),
+  });
+
+  if (!response.ok) {
+    const err = await response.text();
+    throw new Error(`API error: ${response.status} - ${err}`);
+  }
+
+  const data = await response.json();
+  const content = data.choices?.[0]?.message?.content;
+  if (!content) throw new Error('No response');
+
+  return JSON.parse(content);
+}
