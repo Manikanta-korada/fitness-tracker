@@ -314,11 +314,14 @@ export default function DietLog() {
                 else if (isPast) bgColor = 'bg-gray-100 text-gray-400';
                 else bgColor = 'bg-gray-50 text-gray-500';
 
+                const isFuture = dateStr > today;
+
                 return (
                   <button
                     key={day}
-                    onClick={() => setSelectedDate(dateStr)}
-                    className={`py-1 rounded text-[11px] font-medium flex items-center justify-center ${bgColor} ${isSelected ? 'ring-2 ring-indigo-500' : ''} ${isToday ? 'ring-1 ring-indigo-300' : ''} hover:opacity-80`}
+                    onClick={() => !isFuture && setSelectedDate(dateStr)}
+                    disabled={isFuture}
+                    className={`py-1 rounded text-[11px] font-medium flex items-center justify-center ${bgColor} ${isSelected ? 'ring-2 ring-indigo-500' : ''} ${isToday ? 'ring-1 ring-indigo-300' : ''} ${isFuture ? 'opacity-30 cursor-not-allowed' : 'hover:opacity-80'}`}
                   >
                     {day}
                   </button>
@@ -436,7 +439,23 @@ export default function DietLog() {
                 <textarea
                   value={aiText}
                   onChange={(e) => setAiText(e.target.value)}
-                  placeholder="Describe what you ate, e.g.: 2 eggs, 1 chapati, dal 1 bowl, curd 100g"
+                  placeholder={(() => {
+                    const recentForType = logs.filter(l => l.mealType === mealType);
+                    if (recentForType.length > 0) {
+                      const names = recentForType.slice(0, 3).map(l => l.meal?.name || l.customName).filter(Boolean).join(', ');
+                      return `e.g. ${names}`;
+                    }
+                    const defaults = {
+                      'Breakfast': 'e.g. 2 eggs, 1 toast, black coffee',
+                      'Pre-Workout': 'e.g. banana, 1 scoop whey, 5g creatine',
+                      'Post-Workout': 'e.g. protein shake, banana, peanut butter toast',
+                      'Lunch': 'e.g. rice 1 cup, dal, chicken 150g, curd',
+                      'Snacks': 'e.g. almonds 10, apple, green tea',
+                      'Dinner': 'e.g. 2 chapati, paneer curry, salad',
+                      'Miscellaneous': 'e.g. protein bar, coconut water',
+                    };
+                    return defaults[mealType] || 'Describe what you ate...';
+                  })()}
                   rows={3}
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none"
                 />

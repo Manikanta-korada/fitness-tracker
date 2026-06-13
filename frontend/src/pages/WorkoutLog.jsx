@@ -517,6 +517,7 @@ export default function WorkoutLog() {
               type="date"
               value={workoutDate}
               onChange={(e) => setWorkoutDate(e.target.value)}
+              max={new Date().toISOString().split('T')[0]}
               className="border border-gray-200 rounded-lg px-3 py-2 text-sm"
             />
           </div>
@@ -672,11 +673,14 @@ export default function WorkoutLog() {
                 else if (isPast) bgColor = 'bg-red-50 text-red-400';
                 else bgColor = 'bg-gray-50 text-gray-500';
 
+                const isFuture = dateStr > today;
+
                 return (
                   <button
                     key={day}
-                    onClick={() => setViewDate(dateStr)}
-                    className={`py-1 rounded text-[11px] font-medium flex items-center justify-center ${bgColor} ${isSelected ? 'ring-2 ring-indigo-500' : ''} ${isToday ? 'ring-1 ring-indigo-300' : ''} hover:opacity-80`}
+                    onClick={() => !isFuture && setViewDate(dateStr)}
+                    disabled={isFuture}
+                    className={`py-1 rounded text-[11px] font-medium flex items-center justify-center ${bgColor} ${isSelected ? 'ring-2 ring-indigo-500' : ''} ${isToday ? 'ring-1 ring-indigo-300' : ''} ${isFuture ? 'opacity-30 cursor-not-allowed' : 'hover:opacity-80'}`}
                   >
                     {day}
                   </button>
