@@ -1,5 +1,17 @@
 const API_KEY = import.meta.env.VITE_GROQ_API_KEY || import.meta.env.VITE_GEMINI_API_KEY;
 
+async function fetchWithRetry(url, options, retries = 2) {
+  for (let i = 0; i <= retries; i++) {
+    try {
+      const res = await fetch(url, options);
+      if (res.ok || i === retries) return res;
+    } catch (err) {
+      if (i === retries) throw err;
+    }
+    await new Promise(r => setTimeout(r, 1000 * (i + 1)));
+  }
+}
+
 const SYSTEM_PROMPT = `You are a nutrition expert. Parse the user's food description into individual food items with estimated nutritional information.
 
 Rules:
@@ -28,7 +40,7 @@ export async function parseFood(text) {
 }
 
 async function parseFoodGroq(text) {
-  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+  const response = await fetchWithRetry('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -74,7 +86,7 @@ async function parseFoodGroq(text) {
 }
 
 async function parseFoodGemini(text) {
-  const response = await fetch(
+  const response = await fetchWithRetry(
     `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${API_KEY}`,
     {
       method: 'POST',
@@ -145,7 +157,7 @@ Return a JSON object with:
 
 Keep it to 4-6 exercises. Use realistic sets/reps. Notes should be brief tips.`;
 
-  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+  const response = await fetchWithRetry('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

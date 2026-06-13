@@ -116,19 +116,16 @@ export default function Progress() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <h1 className="text-xl md:text-2xl font-bold text-gray-900">Progress</h1>
         <div className="flex gap-3 items-center">
-          <div className="flex bg-gray-100 rounded-lg p-0.5">
-            <button
-              onClick={() => setRangeDays(7)}
-              className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${rangeDays === 7 ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-500'}`}
-            >
-              7 Days
-            </button>
-            <button
-              onClick={() => setRangeDays(30)}
-              className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${rangeDays === 30 ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-500'}`}
-            >
-              30 Days
-            </button>
+          <div className="flex items-center bg-gray-100 rounded-lg p-0.5">
+            {[{ label: '7d', value: 7 }, { label: '30d', value: 30 }, { label: 'All', value: 9999 }].map(({ label, value }) => (
+              <button
+                key={value}
+                onClick={() => setRangeDays(value)}
+                className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${rangeDays === value ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-500'}`}
+              >
+                {label}
+              </button>
+            ))}
           </div>
           <button
             onClick={handleExportPDF}
@@ -220,7 +217,7 @@ export default function Progress() {
           </form>
           {!loaded.weight ? <CardSpinner /> : weightData.length > 0 ? (
             <ResponsiveContainer width="100%" height={200}>
-              <LineChart data={weightData}>
+              <LineChart data={weightData.filter(w => w.date >= new Date(Date.now() - rangeDays * 24 * 60 * 60 * 1000).toISOString().split('T')[0])}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="date" tick={{ fontSize: 11 }} />
                 <YAxis tick={{ fontSize: 11 }} domain={['auto', 'auto']} />
@@ -468,15 +465,16 @@ function TdeeCard({ weightData, calorieData }) {
 
   return (
     <div className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm mb-6">
-      <h3 className="text-sm font-semibold text-gray-700 mb-3">Adaptive TDEE Estimate</h3>
+      <h3 className="text-sm font-semibold text-gray-700 mb-1">Your Daily Calorie Burn (TDEE)</h3>
+      <p className="text-xs text-gray-400 mb-4">How many calories your body burns per day, calculated from your actual intake and weight changes. Eat above this to gain, below to lose.</p>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div>
-          <p className="text-xs text-gray-500">Your TDEE</p>
-          <p className="text-2xl font-bold text-gray-900">{tdee}<span className="text-xs font-normal text-gray-400 ml-1">kcal</span></p>
+          <p className="text-xs text-gray-500">You Burn</p>
+          <p className="text-2xl font-bold text-gray-900">{tdee}<span className="text-xs font-normal text-gray-400 ml-1">kcal/day</span></p>
         </div>
         <div>
-          <p className="text-xs text-gray-500">Avg Intake</p>
-          <p className="text-lg font-bold text-gray-900">{avgCalories}<span className="text-xs font-normal text-gray-400 ml-1">kcal</span></p>
+          <p className="text-xs text-gray-500">You Eat</p>
+          <p className="text-lg font-bold text-gray-900">{avgCalories}<span className="text-xs font-normal text-gray-400 ml-1">kcal/day</span></p>
         </div>
         <div>
           <p className="text-xs text-gray-500">Daily Balance</p>
