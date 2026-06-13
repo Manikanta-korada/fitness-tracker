@@ -403,6 +403,45 @@ public class ProgressController {
         return stats;
     }
 
+    @GetMapping("/streak")
+    public Map<String, Object> getStreak(HttpServletRequest request) {
+        String userId = (String) request.getAttribute("userId");
+        LocalDate today = LocalDate.now();
+
+        List<DietLog> allDiet = dietLogRepository.findByUserIdAndDateBetween(userId, today.minusDays(365), today);
+        List<WorkoutSession> allWorkouts = workoutSessionRepository.findByUserIdAndDateBetween(userId, today.minusDays(365), today);
+
+        Set<LocalDate> activeDays = new HashSet<>();
+        allDiet.forEach(d -> activeDays.add(d.getDate()));
+        allWorkouts.forEach(w -> activeDays.add(w.getDate()));
+
+        int currentStreak = 0;
+        LocalDate check = today;
+        while (activeDays.contains(check)) {
+            currentStreak++;
+            check = check.minusDays(1);
+        }
+
+        int longestStreak = 0;
+        int tempStreak = 0;
+        LocalDate cursor = today;
+        for (int i = 0; i < 365; i++) {
+            if (activeDays.contains(cursor)) {
+                tempStreak++;
+                longestStreak = Math.max(longestStreak, tempStreak);
+            } else {
+                tempStreak = 0;
+            }
+            cursor = cursor.minusDays(1);
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("currentStreak", currentStreak);
+        result.put("longestStreak", longestStreak);
+        result.put("todayLogged", activeDays.contains(today));
+        return result;
+    }
+
     @GetMapping("/personal-records")
     public List<Map<String, Object>> getPersonalRecords(HttpServletRequest request) {
         String userId = (String) request.getAttribute("userId");

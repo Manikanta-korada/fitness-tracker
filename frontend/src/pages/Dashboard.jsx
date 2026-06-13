@@ -14,6 +14,7 @@ export default function Dashboard() {
   const [mealRecs, setMealRecs] = useState([]);
   const [muscleRec, setMuscleRec] = useState(null);
   const [weeklyStreak, setWeeklyStreak] = useState(null);
+  const [streak, setStreak] = useState(null);
   const [healthNotes, setHealthNotes] = useState([]);
   const [weeklySummary, setWeeklySummary] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -33,6 +34,7 @@ export default function Dashboard() {
       waterApi.getTrend(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], today).then(setWaterWeekly),
     ]).finally(() => setLoading(false));
     progressApi.getWeeklySummary().then(setWeeklySummary).catch(() => {});
+    progressApi.getStreak().then(setStreak).catch(() => {});
   }, []);
 
   const totalCalories = dietLogs.reduce((sum, l) => sum + l.calories, 0);
@@ -124,15 +126,31 @@ export default function Dashboard() {
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        {weeklyStreak && (
+        {streak && (
           <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
-            <h3 className="text-sm font-semibold text-gray-700 mb-2">Weekly Streak</h3>
-            <p className="text-2xl font-bold text-indigo-600">{weeklyStreak.daysLogged}/{weeklyStreak.totalDays} <span className="text-sm font-normal text-gray-500">days</span></p>
-            <div className="flex gap-1 mt-2">
-              {[...Array(7)].map((_, i) => (
-                <div key={i} className={`w-4 h-4 rounded-full ${i < weeklyStreak.daysLogged ? 'bg-indigo-500' : 'bg-gray-200'}`} />
-              ))}
-            </div>
+            <h3 className="text-sm font-semibold text-gray-700 mb-2">Logging Streak</h3>
+            {streak.currentStreak > 0 ? (
+              <>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-3xl">{streak.currentStreak > 7 ? '🔥' : streak.currentStreak > 2 ? '⚡' : '💪'}</span>
+                  <p className="text-2xl font-bold text-indigo-600">{streak.currentStreak}<span className="text-sm font-normal text-gray-500 ml-1">days</span></p>
+                </div>
+                {streak.longestStreak > streak.currentStreak && (
+                  <p className="text-xs text-gray-400 mt-2">Best: {streak.longestStreak} days</p>
+                )}
+                {!streak.todayLogged && (
+                  <p className="text-xs text-orange-600 font-medium mt-2">Log today to keep your streak!</p>
+                )}
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-gray-500">No active streak</p>
+                <p className="text-xs text-indigo-600 font-medium mt-2">Log a meal or workout to start!</p>
+                {streak.longestStreak > 0 && (
+                  <p className="text-xs text-gray-400 mt-1">Your best: {streak.longestStreak} days</p>
+                )}
+              </>
+            )}
           </div>
         )}
 
