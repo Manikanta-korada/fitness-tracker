@@ -201,11 +201,13 @@ public class ProgressController {
         String userId = (String) request.getAttribute("userId");
         List<WorkoutSession> sessions = workoutSessionRepository.findByUserIdAndDateBetween(userId, from, to);
 
+        Set<String> excluded = Set.of("Cardio", "Core");
         Map<String, Double> volumeByGroup = new TreeMap<>();
         for (WorkoutSession session : sessions) {
             for (WorkoutEntry entry : session.getEntries()) {
                 if (entry.getExercise() == null) continue;
                 String group = entry.getExercise().getMuscleGroup();
+                if (excluded.contains(group)) continue;
                 double volume = entry.getSets().stream()
                         .mapToDouble(s -> s.getWeightKg() * s.getReps())
                         .sum();
